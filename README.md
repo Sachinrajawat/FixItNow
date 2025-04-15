@@ -2,7 +2,7 @@
 
 <img src="./public/screen.png">
 
-  <h3 align="center">Sahreen Home Service App</h3>
+  <h3 align="center">FixItNow - Home Service App</h3>
 
 </div>
 
@@ -25,8 +25,9 @@ Developed with Next.js and leveraging its server-side rendering capabilities, th
 - Next.js
 - Shadcn/ui
 - Tailwind CSS
-- Hygraph
-- Descope
+- Hygraph (CMS)
+- Descope (Authentication)
+- Docker
 
 ## <a name="features">🔋 Features</a>
 
@@ -55,12 +56,13 @@ Make sure you have the following installed on your machine:
 - [Git](https://git-scm.com/)
 - [Node.js](https://nodejs.org/en)
 - [npm](https://www.npmjs.com/) (Node Package Manager)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 **Cloning the Repository**
 
 ```bash
-git clone https://github.com/sumon0002001/home_service_app.git
-cd home_service_app
+git clone https://github.com/Sachinrajawat/FixItNow.git
+cd FixItNow
 ```
 
 **Installation**
@@ -76,7 +78,9 @@ npm install
 Create a new file named `.env` in the root of your project and add the following content:
 
 ```env
-NEXT_PUBLIC_MASTER_URL_KEY= ""
+NEXT_PUBLIC_MASTER_URL_KEY="your_hygraph_key"
+DESCOPE_CLIENT_ID="your_descope_id"
+DESCOPE_CLIENT_SECRET="your_descope_secret"
 ```
 
 Replace the placeholder values with your actual credentials. You can obtain these credentials by signing up on the corresponding websites from [hygraph](https://hygraph.com/)
@@ -84,7 +88,11 @@ Replace the placeholder values with your actual credentials. You can obtain thes
 **Running the Project**
 
 ```bash
+# Development mode
 npm run dev
+
+# Using Docker
+docker-compose up --build
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to view the project.

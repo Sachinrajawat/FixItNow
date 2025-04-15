@@ -12,6 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       
+      - name: Create env file
+        run: |
+          touch .env
+          echo "NEXT_PUBLIC_MASTER_URL_KEY=${{ secrets.NEXT_PUBLIC_MASTER_URL_KEY }}" >> .env
+          echo "DESCOPE_CLIENT_ID=${{ secrets.DESCOPE_CLIENT_ID }}" >> .env
+          echo "DESCOPE_CLIENT_SECRET=${{ secrets.DESCOPE_CLIENT_SECRET }}" >> .env
+      
       - name: Build and run Docker
         run: |
           docker-compose build

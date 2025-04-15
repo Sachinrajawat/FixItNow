@@ -1,0 +1,17 @@
+version: '3'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_MASTER_URL_KEY=your_key_here
+      - DESCOPE_CLIENT_ID=your_client_id_here
+      - DESCOPE_CLIENT_SECRET=your_client_secret_here
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev

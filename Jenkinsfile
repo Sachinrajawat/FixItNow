@@ -5,6 +5,12 @@ pipeline {
         nodejs 'Node18'
     }
 
+    environment {
+        NEXT_PUBLIC_MASTER_URL_KEY = credentials('NEXT_PUBLIC_MASTER_URL_KEY')
+        DESCOPE_CLIENT_ID = credentials('DESCOPE_CLIENT_ID')
+        DESCOPE_CLIENT_SECRET = credentials('DESCOPE_CLIENT_SECRET')
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -14,13 +20,13 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                bat 'npm install'
+                sh 'npm install'
             }
         }
 
         stage('Build') {
             steps {
-                bat 'npm run build'
+                sh 'npm run build'
             }
         }
 
@@ -28,7 +34,8 @@ pipeline {
             steps {
                 script {
                     try {
-                        bat 'docker build -t fixitnow-app .'
+                        sh 'docker build -t fixitnow-app .'
+                        sh 'docker run -d -p 3000:3000 --name fixitnow fixitnow-app'
                     } catch (err) {
                         echo "Docker build failed: ${err}"
                         throw err

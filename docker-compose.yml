@@ -13,3 +13,21 @@ services:
       - /app/node_modules
       - /app/.next
     command: npm run dev
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    privileged: true
+    user: root
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    container_name: jenkins
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/local/bin/docker:/usr/local/bin/docker
+    environment:
+      - DOCKER_HOST=tcp://host.docker.internal:2375
+
+volumes:
+  jenkins_home:

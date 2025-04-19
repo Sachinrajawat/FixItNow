@@ -25,9 +25,17 @@ services:
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-      - /usr/local/bin/docker:/usr/local/bin/docker
     environment:
       - DOCKER_HOST=tcp://host.docker.internal:2375
+      - NEXT_PUBLIC_MASTER_URL_KEY=${NEXT_PUBLIC_MASTER_URL_KEY}
+      - DESCOPE_CLIENT_ID=${DESCOPE_CLIENT_ID}
+      - DESCOPE_CLIENT_SECRET=${DESCOPE_CLIENT_SECRET}
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
 
 volumes:
   jenkins_home:

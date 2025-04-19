@@ -5,11 +5,6 @@ pipeline {
         nodejs 'Node18'
     }
 
-    environment {
-        DOCKER_IMAGE = 'fixitnow-app'
-        DOCKER_TAG = 'latest'
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -19,40 +14,25 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh 'npm test'
+                bat 'npm install'
             }
         }
 
         stage('Build') {
             steps {
-                sh 'npm run build'
+                bat 'npm run build'
             }
         }
 
         stage('Docker Build') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}:${DOCKER_TAG}")
-                }
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                script {
                     try {
-                        sh "docker stop ${DOCKER_IMAGE}"
-                        sh "docker rm ${DOCKER_IMAGE}"
+                        bat 'docker build -t fixitnow-app .'
                     } catch (err) {
-                        echo "Container not found, proceeding..."
+                        echo "Docker build failed: ${err}"
+                        throw err
                     }
-                    sh "docker run -d -p 3000:3000 --name ${DOCKER_IMAGE} ${DOCKER_IMAGE}:${DOCKER_TAG}"
                 }
             }
         }

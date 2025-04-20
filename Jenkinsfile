@@ -1,65 +1,57 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'Node18'
-    }
-
     environment {
-        NEXT_PUBLIC_MASTER_URL_KEY = credentials('NEXT_PUBLIC_MASTER_URL_KEY')
-        DESCOPE_CLIENT_ID = credentials('DESCOPE_CLIENT_ID')
-        DESCOPE_CLIENT_SECRET = credentials('DESCOPE_CLIENT_SECRET')
-        // Add more memory for Next.js build
-        NODE_OPTIONS = '--max_old_space_size=4096'
+        REPO_URL = 'https://github.com/Sachinrajawat/FixItNow.git'
+        PROJECT_NAME = 'FixItNow'
     }
 
     stages {
-        stage('Checkout') {
+        stage('Clean Workspace') {
             steps {
-                checkout scm
+                cleanWs()
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Clone Repository') {
             steps {
-                sh 'npm install'
+                bat "git clone $REPO_URL"
             }
         }
 
-        stage('Build') {
+        stage('Build Docker Images') {
             steps {
-                // Clear cache and build
-                sh 'rm -rf .next'
-                sh 'npm run build'
-            }
-        }
-
-        stage('Docker Build') {
-            steps {
-                script {
-                    try {
-                        // Install Docker in Jenkins container
-                        sh '''
-                            apt-get update
-                            apt-get install -y docker.io
-                            service docker start
-                        '''
-                        sh 'docker build -f Dockerfile.dev -t fixitnow-app .'
-                    } catch (err) {
-                        echo "Docker build failed: ${err}"
-                        throw err
-                    }
+                dir("${PROJECT_NAME}") {
+                    bat 'docker-compose build'
                 }
+            }
+        }
+
+        stage('Start Containers') {
+            steps {
+                dir("${PROJECT_NAME}") {
+                    bat 'docker-compose up -d'
+                }
+            }
+        }
+
+        stage('Verify Running Containers') {
+            steps {
+                bat 'docker ps -a'
             }
         }
     }
 
     post {
         success {
-            echo 'Pipeline succeeded!'
+            mail to: 'sachinrajawat835@gmail.com',
+                 subject: "✅ Build Success - #${env.BUILD_NUMBER}",
+                 body: "Your Jenkins pipeline ran successfully!"
         }
         failure {
-            echo 'Pipeline failed!'
+            mail to: 'sachinrajawat835@gmail.com',
+                 subject: "❌ Build Failed - #${env.BUILD_NUMBER}",
+                 body: "Pipeline failed. Please check Jenkins logs."
         }
     }
 }

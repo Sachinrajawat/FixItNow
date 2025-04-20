@@ -15,14 +15,14 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                bat "git clone $REPO_URL"
+                sh "git clone $REPO_URL"
             }
         }
 
         stage('Build Docker Images') {
             steps {
                 dir("${PROJECT_NAME}") {
-                    bat 'docker-compose build'
+                    sh 'docker-compose build'
                 }
             }
         }
@@ -30,14 +30,14 @@ pipeline {
         stage('Start Containers') {
             steps {
                 dir("${PROJECT_NAME}") {
-                    bat 'docker-compose up -d'
+                    sh 'docker-compose up -d'
                 }
             }
         }
 
         stage('Verify Running Containers') {
             steps {
-                bat 'docker ps -a'
+                sh 'docker ps -a'
             }
         }
     }

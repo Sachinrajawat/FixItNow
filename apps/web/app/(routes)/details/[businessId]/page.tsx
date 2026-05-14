@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import BusinessInfo from "../_components/BusinessInfo";
 import SuggestedBusinessList from "../_components/SuggestedBusinessList";
 import BusinessDescription from "../_components/BusinessDescription";
+import { ReviewSection } from "../_components/ReviewSection";
 import { api, ApiError } from "@/lib/apiClient";
 import type { Business } from "@/types";
 
@@ -44,6 +45,13 @@ const BusinessDetails = ({ params }: BusinessDetailsProps) => {
     return () => controller.abort();
   }, [params?.businessId]);
 
+  const handleAggregateChange = useCallback(
+    (next: { ratingAvg: number; ratingCount: number }) => {
+      setBusiness((prev) => (prev ? { ...prev, ...next } : prev));
+    },
+    []
+  );
+
   if (loading) {
     return (
       <div
@@ -70,6 +78,14 @@ const BusinessDetails = ({ params }: BusinessDetailsProps) => {
       <div className="mt-16 grid grid-cols-1 gap-10 md:grid-cols-3">
         <div className="md:col-span-2">
           <BusinessDescription business={business} />
+          <ReviewSection
+            businessId={business.id}
+            aggregate={{
+              ratingAvg: business.ratingAvg,
+              ratingCount: business.ratingCount,
+            }}
+            onAggregateChange={handleAggregateChange}
+          />
         </div>
         <aside>
           <SuggestedBusinessList business={business} />

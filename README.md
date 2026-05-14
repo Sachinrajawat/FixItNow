@@ -22,8 +22,9 @@ Next.js 14 frontend, Express + MongoDB + Redis backend, all in TypeScript.</p>
 8. [Running with Docker](#running-with-docker)
 9. [Testing & quality](#testing--quality)
 10. [CI/CD](#cicd)
-11. [Roadmap](#roadmap)
-12. [License](#license)
+11. [Deployment](#deployment)
+12. [Roadmap](#roadmap)
+13. [License](#license)
 
 ---
 
@@ -218,15 +219,27 @@ Health checks are configured on Mongo and Redis so `api` waits for them before s
 
 A [`Jenkinsfile`](./Jenkinsfile) mirrors the pipeline for self-hosted Jenkins users.
 
+## Deployment
+
+The repo is **deploy-ready** for a free-tier production stack:
+
+- **Web** (`apps/web`) → Vercel (Next.js standalone build)
+- **API** (`apps/api`) → Render Docker web service (blueprint in [`render.yaml`](./render.yaml))
+- **MongoDB** → Atlas free M0 cluster
+- **Redis** → Upstash free tier (10k commands/day)
+- **SEO** → dynamic [`app/sitemap.ts`](./apps/web/app/sitemap.ts), [`app/robots.ts`](./apps/web/app/robots.ts), JSON-LD `LocalBusiness` on `/details/[id]`
+
+Full step-by-step (~30 min, click-only): [**DEPLOY.md**](./DEPLOY.md).
+
 ## Roadmap
 
 - [x] **Phase 0 — Cleanup**: bug fixes, real metadata, footer, theme toggle, working search, route protection, multi-stage Docker, modern CI.
 - [x] **Phase 1 — TS & quality**: TypeScript migration (strict), ESLint/Prettier/Husky/lint-staged, env validation with Zod, Vitest + React Testing Library, Sentry.
 - [x] **Phase 2, Step 1 — Monorepo + API skeleton**: npm workspaces (`apps/web`, `apps/api`, `packages/types`); Express + TS + MongoDB + Redis API with health probes, request id, structured logging, Helmet, cors, validation middleware, AppError, Swagger UI; first integration tests with Jest + Supertest; Docker compose stack with mongo + redis + api + web.
 - [x] **Phase 2, Step 2 — Auth & models**: User/Category/Business/Booking/Review Mongoose models with proper indexes (compound, text, geospatial, unique); bcrypt password hashing; JWT access (15 m) + refresh (7 d) with Redis allowlist + single-use rotation + global revocation on logout; httpOnly+SameSite refresh cookie scoped to /auth; `requireAuth` + `requireRole` middlewares; full integration test suite against MongoMemoryServer + ioredis-mock.
-- [x] **Phase 2, Step 3 — Endpoints & web migration**: full CRUD for `/categories`, `/businesses` (text + category + paginated + `?near=lng,lat&radius=` geo search), `/bookings` (create / list-mine / cancel with double-booking prevented by a partial unique index), `/reviews` (with idempotent business `ratingAvg`/`ratingCount` aggregation); Redis cache-aside on GET endpoints + Redis-backed rate limiting on POSTs; `npm run seed` script with realistic data; integration tests for every endpoint against MongoMemoryServer. On the web side: typed `lib/apiClient.ts` (fetch + auto-refresh on 401 + abort), `AuthProvider` powered by the API's cookie+JWT flow, dedicated `/login` and `/signup` pages with react-hook-form + Zod, Hygraph + NextAuth + Descope removed entirely, every remaining `.jsx` file converted to `.tsx`.
-- [ ] **Phase 3 — Headline features**: reviews & ratings, Stripe (test mode) payments, geo-search, admin dashboard with RBAC, email confirmations, BullMQ background jobs.
-- [ ] **Phase 4 — Polish & deploy**: per-page SEO metadata, sitemap, robots, JSON-LD, accessibility audit, performance budget, deployment to Vercel + Render + MongoDB Atlas, screenshots, architecture diagram, demo video.
+- [x] **Phase 2, Step 3 — Endpoints & web migration**: full CRUD for `/categories`, `/businesses` (text + category + paginated + `?near=lng,lat&radius=` geo search), `/bookings` (create / list-mine / cancel with double-booking prevented by a partial unique index), `/reviews` (with idempotent business `ratingAvg`/`ratingCount` aggregation); Redis cache-aside on GET endpoints + Redis-backed rate limiting on POSTs; `npm run seed` script with realistic data; integration tests for every endpoint against MongoMemoryServer. On the web side: typed `lib/apiClient.ts` (fetch + auto-refresh on 401 + abort), `AuthProvider` powered by the API's cookie+JWT flow, dedicated `/login` and `/signup` pages with react-hook-form + Zod, Hygraph + NextAuth + Descope removed entirely, every remaining `.jsx` file converted to `.tsx`. Auto-generated OpenAPI 3.0 spec from the shared Zod schemas via `zod-to-openapi` so `/api/docs` cannot drift.
+- [ ] **Phase 3 — Headline features** (in progress): reviews & ratings UI ✓, geo-search ✓, admin dashboard with RBAC ✓ (`/admin/categories` shipped; `/admin/businesses` + `/admin/bookings` to come); Stripe (test mode) payments, email confirmations, BullMQ background jobs still pending.
+- [ ] **Phase 4 — Polish & deploy** (partly done): dynamic sitemap + robots ✓, JSON-LD on `/details` ✓, route-group metadata ✓, Render Blueprint + step-by-step [`DEPLOY.md`](./DEPLOY.md) ✓. Pending: per-page `generateMetadata` on dynamic pages, accessibility audit, performance budget, deployed live URLs, screenshots and demo video.
 
 ## License
 

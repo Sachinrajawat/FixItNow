@@ -1,0 +1,47 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+#
+# Spins up the FixItNow API as a single Docker web service. Mongo + Redis
+# are intentionally NOT defined here because the free-tier services on
+# Render don't include Mongo and Render's Redis is paid; we use:
+#   - MongoDB Atlas (free M0 cluster)
+#   - Upstash Redis (free 10k cmds/day)
+# Their connection strings get pasted into the env vars below.
+#
+# To use: in Render, click "New > Blueprint" and point it at this repo.
+# Render will detect this file and prompt for the unset env values.
+
+services:
+  - type: web
+    name: fixitnow-api
+    runtime: docker
+    repo: https://github.com/Sachinrajawat/FixItNow
+    branch: main
+    region: oregon # cheapest free-tier region; change to match your users
+    plan: free
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /readyz
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: MONGO_URI
+        sync: false # paste your Atlas URI in the Render dashboard
+      - key: REDIS_URL
+        sync: false # paste your Upstash redis:// URI in the Render dashboard
+      - key: JWT_ACCESS_SECRET
+        generateValue: true # Render generates a 32+ char random value
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 15m
+      - key: JWT_REFRESH_TTL
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false # paste your Vercel URL after the web deploy
+      - key: LOG_LEVEL
+        value: info
+      - key: SENTRY_DSN
+        sync: false # optional; leave blank to disable

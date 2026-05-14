@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { AdminGate } from "./AdminGate";
+
+export const metadata: Metadata = {
+  title: { default: "Admin", template: "%s · Admin · FixItNow" },
+  // Admin surfaces are auth-gated and only useful to operators; keep them
+  // out of search engines entirely.
+  robots: { index: false, follow: false },
+};
 
 const NAV = [
   { href: "/admin", label: "Overview" },

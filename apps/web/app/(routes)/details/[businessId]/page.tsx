@@ -5,6 +5,7 @@ import BusinessInfo from "../_components/BusinessInfo";
 import SuggestedBusinessList from "../_components/SuggestedBusinessList";
 import BusinessDescription from "../_components/BusinessDescription";
 import { ReviewSection } from "../_components/ReviewSection";
+import { BusinessJsonLd } from "../_components/BusinessJsonLd";
 import { api, ApiError } from "@/lib/apiClient";
 import type { Business } from "@/types";
 
@@ -74,6 +75,7 @@ const BusinessDetails = ({ params }: BusinessDetailsProps) => {
 
   return (
     <div className="px-6 py-8 md:px-36 md:py-20">
+      <BusinessJsonLd business={business} />
       <BusinessInfo business={business} />
       <div className="mt-16 grid grid-cols-1 gap-10 md:grid-cols-3">
         <div className="md:col-span-2">

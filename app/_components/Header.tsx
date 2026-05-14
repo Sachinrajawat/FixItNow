@@ -5,7 +5,6 @@ import { signIn, useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import React from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +15,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ThemeToggle from "./ThemeToggle";
 
-const NAV_LINKS = [
+interface NavLink {
+  href: string;
+  label: string;
+}
+
+const NAV_LINKS: NavLink[] = [
   { href: "/", label: "Home" },
   { href: "/search/Cleaning", label: "Services" },
   { href: "/about", label: "About" },
@@ -26,7 +30,7 @@ const Header = () => {
   const { data, status } = useSession();
   const pathname = usePathname();
 
-  const isActive = (href) =>
+  const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname?.startsWith(href);
 
   return (
@@ -71,6 +75,7 @@ const Header = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
+                type="button"
                 aria-label="Open user menu"
                 className="rounded-full ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
               >

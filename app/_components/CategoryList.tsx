@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import type { Category } from "@/types";
+
+interface CategoryListProps {
+  categoryList?: Category[];
+}
 
 const SkeletonTile = () => (
   <div
@@ -9,7 +13,7 @@ const SkeletonTile = () => (
   />
 );
 
-const CategoryList = ({ categoryList = [] }) => {
+const CategoryList = ({ categoryList = [] }: CategoryListProps) => {
   const hasResults = categoryList.length > 0;
 
   return (

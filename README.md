@@ -35,17 +35,21 @@ The project is intentionally structured the way a small product team would build
 
 ## Tech stack
 
-| Layer            | Choice                                                           |
-| ---------------- | ---------------------------------------------------------------- |
-| Framework        | Next.js 14 (App Router) + React 18                               |
-| Styling          | Tailwind CSS, shadcn/ui (Radix primitives), Lucide icons         |
-| Auth             | NextAuth.js with a Descope OIDC provider                         |
-| Data (today)     | Hygraph (headless GraphQL CMS) via `graphql-request`             |
-| Notifications    | Sonner (toast)                                                   |
-| Theming          | `next-themes` (system / light / dark)                            |
-| Containerisation | Docker (multi-stage production build) & Docker Compose (dev)     |
-| CI/CD            | GitHub Actions (lint + build + Docker image), Jenkinsfile        |
-| Tooling          | ESLint, Prettier, Husky (planned in Phase 1: TypeScript + tests) |
+| Layer            | Choice                                                        |
+| ---------------- | ------------------------------------------------------------- |
+| Framework        | Next.js 14 (App Router) + React 18                            |
+| Styling          | Tailwind CSS, shadcn/ui (Radix primitives), Lucide icons      |
+| Auth             | NextAuth.js with a Descope OIDC provider                      |
+| Data (today)     | Hygraph (headless GraphQL CMS) via `graphql-request`          |
+| Notifications    | Sonner (toast)                                                |
+| Theming          | `next-themes` (system / light / dark)                         |
+| Containerisation | Docker (multi-stage production build) & Docker Compose (dev)  |
+| CI/CD            | GitHub Actions (lint + build + Docker image), Jenkinsfile     |
+| Language         | TypeScript (strict)                                           |
+| Tests            | Vitest + React Testing Library + jsdom                        |
+| Tooling          | ESLint, Prettier, Husky + lint-staged (pre-commit & pre-push) |
+| Observability    | Sentry (client + server + edge), opt-in via DSN               |
+| Env safety       | Zod-validated `lib/env.ts` (server fails fast on bad config)  |
 
 ## Features
 
@@ -164,10 +168,12 @@ docker run -p 3000:3000 --env-file .env fixitnow:latest
 
 ## Testing & quality
 
-- **Lint**: ESLint via `next lint`. Run `npm run lint`.
-- **Format**: Prettier with `prettier-plugin-tailwindcss`. Run `npm run format:fix`.
-- **Tests**: Vitest + React Testing Library will be added in **Phase 1**.
-- **Type safety**: TypeScript migration planned in **Phase 1**.
+- **Type safety**: `npm run typecheck` (strict TypeScript).
+- **Lint**: `npm run lint` (ESLint with `next/core-web-vitals`).
+- **Format**: `npm run format` / `npm run format:fix` (Prettier + `prettier-plugin-tailwindcss`).
+- **Tests**: `npm test` (Vitest + React Testing Library + jsdom). Coverage with `npm run test:coverage`.
+- **Pre-commit**: Husky runs `lint-staged` (ESLint --fix + Prettier --write on staged files).
+- **Pre-push**: Husky runs `npm run typecheck`.
 
 ## CI/CD
 
@@ -186,7 +192,7 @@ A [`Jenkinsfile`](./Jenkinsfile) mirrors the pipeline for self-hosted Jenkins us
 This project is being delivered in clear phases (see the original walkthrough for full context):
 
 - [x] **Phase 0 — Cleanup**: bug fixes, real metadata, footer, theme toggle, working search, route protection, multi-stage Docker, modern CI.
-- [ ] **Phase 1 — TS & quality**: TypeScript migration, ESLint/Prettier/Husky/lint-staged, env validation with Zod, Vitest + React Testing Library, Sentry.
+- [x] **Phase 1 — TS & quality**: TypeScript migration (strict), ESLint/Prettier/Husky/lint-staged, env validation with Zod, Vitest + React Testing Library, Sentry.
 - [ ] **Phase 2 — Real backend**: monorepo split (`apps/web` + `apps/api` + `packages/types`). Express + MongoDB + Mongoose + Redis API in TypeScript, JWT auth (access + refresh, httpOnly cookies), Zod request validation, Swagger UI, Pino logs, Supertest integration tests. Hygraph removed.
 - [ ] **Phase 3 — Headline features**: reviews & ratings, Stripe (test mode) payments, geo-search, admin dashboard with RBAC, email confirmations, BullMQ background jobs.
 - [ ] **Phase 4 — Polish & deploy**: per-page SEO metadata, sitemap, robots, JSON-LD, accessibility audit, performance budget, deployment to Vercel + Render + MongoDB Atlas, screenshots, architecture diagram, demo video.

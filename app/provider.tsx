@@ -2,8 +2,13 @@
 
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
+import type { ReactNode } from "react";
 
-export default function NextAuthSessionProvider({ children }) {
+export default function NextAuthSessionProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   return (
     <SessionProvider>
       <ThemeProvider

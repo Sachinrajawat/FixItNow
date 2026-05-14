@@ -1,21 +1,32 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Hero from "./_components/Hero";
 import CategoryList from "./_components/CategoryList";
 import GlobalApi from "./_services/GlobalApi";
 import BusinessList from "./_components/BusinessList";
+import type { Business, Category } from "@/types";
 
-const Home = () => {
-  const [categoryList, setCategoryList] = useState([]);
-  const [businessList, setBusinessList] = useState([]);
+interface CategoriesResponse {
+  categories: Category[];
+}
+
+interface BusinessesResponse {
+  businessLists: Business[];
+}
+
+export default function Home() {
+  const [categoryList, setCategoryList] = useState<Category[]>([]);
+  const [businessList, setBusinessList] = useState<Business[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    Promise.allSettled([
-      GlobalApi.getCategory(),
-      GlobalApi.getAllBusinessDetails(),
+    Promise.allSettled<
+      [Promise<CategoriesResponse>, Promise<BusinessesResponse>]
+    >([
+      GlobalApi.getCategory() as Promise<CategoriesResponse>,
+      GlobalApi.getAllBusinessDetails() as Promise<BusinessesResponse>,
     ]).then(([categoriesRes, businessesRes]) => {
       if (cancelled) return;
 
@@ -44,6 +55,4 @@ const Home = () => {
       <BusinessList businessList={businessList} title="Popular services" />
     </div>
   );
-};
-
-export default Home;
+}

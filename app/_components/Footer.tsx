@@ -1,8 +1,17 @@
 import Link from "next/link";
-import React from "react";
 import { Github, Linkedin, Mail } from "lucide-react";
 
-const FOOTER_SECTIONS = [
+interface FooterLink {
+  label: string;
+  href: string;
+}
+
+interface FooterSection {
+  title: string;
+  links: FooterLink[];
+}
+
+const FOOTER_SECTIONS: FooterSection[] = [
   {
     title: "Product",
     links: [

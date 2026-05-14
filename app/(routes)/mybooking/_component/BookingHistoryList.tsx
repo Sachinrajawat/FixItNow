@@ -1,23 +1,44 @@
 import { Calendar, Clock, MapPin, User } from "lucide-react";
 import Image from "next/image";
-import React, { useMemo } from "react";
+import { useMemo } from "react";
+import type { Booking, BookingTabType } from "@/types";
 
-const BookingHistoryList = ({ bookingHistory = [], type = "booked" }) => {
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+interface BookingHistoryListProps {
+  bookingHistory?: Booking[];
+  type?: BookingTabType;
+}
 
-  const filtered = useMemo(() => {
-    return bookingHistory.filter((item) => {
-      // `item.date` is stored as DD-MM-YYYY (see BookingSection).
-      const [dd, mm, yyyy] = (item?.date || "").split("-").map(Number);
-      if (!dd || !mm || !yyyy) return false;
-      const bookingDate = new Date(yyyy, mm - 1, dd);
-      return type === "booked" ? bookingDate >= today : bookingDate < today;
-    });
-  }, [bookingHistory, type, today]);
+/**
+ * Returns true if the booking's date (DD-MM-YYYY) falls into the requested
+ * tab — "booked" = today or later, "completed" = strictly before today.
+ *
+ * Exported for unit testing.
+ */
+export function shouldShowBooking(
+  booking: Pick<Booking, "date">,
+  type: BookingTabType,
+  today: Date = new Date()
+): boolean {
+  const [dd, mm, yyyy] = (booking?.date || "").split("-").map(Number);
+  if (!dd || !mm || !yyyy) return false;
+
+  const startOfToday = new Date(today);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const bookingDate = new Date(yyyy, mm - 1, dd);
+  return type === "booked"
+    ? bookingDate >= startOfToday
+    : bookingDate < startOfToday;
+}
+
+const BookingHistoryList = ({
+  bookingHistory = [],
+  type = "booked",
+}: BookingHistoryListProps) => {
+  const filtered = useMemo(
+    () => bookingHistory.filter((b) => shouldShowBooking(b, type)),
+    [bookingHistory, type]
+  );
 
   if (filtered.length === 0) {
     return (

@@ -1,7 +1,12 @@
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import type { Business } from "@/types";
+
+interface BusinessListProps {
+  businessList?: Business[];
+  title: string;
+}
 
 const SkeletonCard = () => (
   <div
@@ -10,7 +15,7 @@ const SkeletonCard = () => (
   />
 );
 
-const BusinessList = ({ businessList = [], title }) => {
+const BusinessList = ({ businessList = [], title }: BusinessListProps) => {
   const hasResults = businessList.length > 0;
 
   return (

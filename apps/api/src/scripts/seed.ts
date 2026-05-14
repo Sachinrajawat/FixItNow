@@ -13,7 +13,7 @@ import { env } from "../config/env";
 import { logger } from "../config/logger";
 import { connectMongo, disconnectMongo } from "../config/db";
 import { User } from "../models/User";
-import { Category } from "../models/Category";
+import { Category, slugify } from "../models/Category";
 import { Business } from "../models/Business";
 import { Review } from "../models/Review";
 
@@ -344,11 +344,20 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
   );
 
   // --- Categories ---
+  // findOneAndUpdate with $setOnInsert bypasses Mongoose's pre('validate')
+  // hooks, so we have to compute the slug ourselves on insert. Otherwise
+  // the unique index on `slug` chokes on multiple nulls.
   const categoriesByName = new Map<string, Types.ObjectId>();
   for (const c of CATEGORIES) {
     const doc = await Category.findOneAndUpdate(
       { name: c.name },
-      { $setOnInsert: { name: c.name, iconUrl: c.iconUrl } },
+      {
+        $setOnInsert: {
+          name: c.name,
+          slug: slugify(c.name),
+          iconUrl: c.iconUrl,
+        },
+      },
       { new: true, upsert: true, runValidators: true }
     );
     categoriesByName.set(c.name, doc!._id as Types.ObjectId);
@@ -366,11 +375,13 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
       );
       continue;
     }
+    const slugSuffix = new Types.ObjectId().toHexString().slice(-6);
     const doc = await Business.findOneAndUpdate(
       { name: b.name },
       {
         $setOnInsert: {
           name: b.name,
+          slug: `${slugify(b.name)}-${slugSuffix}`,
           about: b.about,
           address: b.address,
           contactPerson: b.contactPerson,

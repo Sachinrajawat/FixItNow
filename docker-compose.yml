@@ -4,7 +4,10 @@ services:
     container_name: fixitnow-mongo
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      # Mapped to 27018 on the host so it doesn't clash with a local Mongo
+      # (e.g. an SSH-tunnelled instance). Inside the compose network the API
+      # still talks to it on the default 27017 via the `mongo` hostname.
+      - "27018:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
@@ -20,7 +23,8 @@ services:
     container_name: fixitnow-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      # 6380 on the host to avoid a clash with a local / tunnelled Redis.
+      - "6380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

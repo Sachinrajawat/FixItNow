@@ -151,19 +151,19 @@ docker compose up --build
 
 ### `apps/api` (`.env`)
 
-| Variable             | Required | Description                                            |
-| -------------------- | :------: | ------------------------------------------------------ |
-| `NODE_ENV`           |    no    | `development` (default), `test`, or `production`.      |
-| `PORT`               |    no    | Default `4000`.                                        |
-| `MONGO_URI`          |   yes    | e.g. `mongodb://localhost:27017/fixitnow`.             |
-| `REDIS_URL`          |   yes    | e.g. `redis://localhost:6379`.                         |
-| `JWT_ACCESS_SECRET`  |   yes    | ≥ 32 chars. Phase 2 Step 2.                            |
-| `JWT_REFRESH_SECRET` |   yes    | ≥ 32 chars. Phase 2 Step 2.                            |
-| `JWT_ACCESS_TTL`     |    no    | Default `15m`.                                         |
-| `JWT_REFRESH_TTL`    |    no    | Default `7d`.                                          |
-| `CORS_ORIGIN`        |    no    | Comma-separated list. Default `http://localhost:3000`. |
-| `LOG_LEVEL`          |    no    | `info` (default) / `debug` / `warn` / etc.             |
-| `SENTRY_DSN`         |    no    | Optional server-side Sentry DSN.                       |
+| Variable             | Required | Description                                                                                                 |
+| -------------------- | :------: | ----------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`           |    no    | `development` (default), `test`, or `production`.                                                           |
+| `PORT`               |    no    | Default `4000`.                                                                                             |
+| `MONGO_URI`          |   yes    | e.g. `mongodb://localhost:27018/fixitnow` (docker-mapped) or `mongodb://localhost:27017/fixitnow` (native). |
+| `REDIS_URL`          |   yes    | e.g. `redis://localhost:6380` (docker-mapped) or `redis://localhost:6379` (native).                         |
+| `JWT_ACCESS_SECRET`  |   yes    | ≥ 32 chars. Phase 2 Step 2.                                                                                 |
+| `JWT_REFRESH_SECRET` |   yes    | ≥ 32 chars. Phase 2 Step 2.                                                                                 |
+| `JWT_ACCESS_TTL`     |    no    | Default `15m`.                                                                                              |
+| `JWT_REFRESH_TTL`    |    no    | Default `7d`.                                                                                               |
+| `CORS_ORIGIN`        |    no    | Comma-separated list. Default `http://localhost:3000`.                                                      |
+| `LOG_LEVEL`          |    no    | `info` (default) / `debug` / `warn` / etc.                                                                  |
+| `SENTRY_DSN`         |    no    | Optional server-side Sentry DSN.                                                                            |
 
 ## Useful scripts
 
@@ -193,12 +193,12 @@ docker compose up --build
 
 This brings up four services:
 
-| Service | Port  | Description                              |
-| ------- | ----- | ---------------------------------------- |
-| `mongo` | 27017 | MongoDB 7 with a named volume            |
-| `redis` | 6379  | Redis 7 (alpine)                         |
-| `api`   | 4000  | `@fixitnow/api` (multi-stage prod image) |
-| `web`   | 3000  | `@fixitnow/web` (dev container)          |
+| Service | Port           | Description                                                                                      |
+| ------- | -------------- | ------------------------------------------------------------------------------------------------ |
+| `mongo` | 27018 -> 27017 | MongoDB 7 with a named volume (host port 27018 to avoid clashing with a local / tunnelled Mongo) |
+| `redis` | 6380 -> 6379   | Redis 7 (alpine, host port 6380)                                                                 |
+| `api`   | 4000           | `@fixitnow/api` (multi-stage prod image)                                                         |
+| `web`   | 3000           | `@fixitnow/web` (dev container)                                                                  |
 
 Health checks are configured on Mongo and Redis so `api` waits for them before starting.
 

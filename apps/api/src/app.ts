@@ -12,6 +12,10 @@ import { requestId } from "./middlewares/requestId";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
 import healthRouter from "./routes/health";
 import authRouter from "./routes/auth";
+import categoriesRouter from "./routes/categories";
+import businessesRouter from "./routes/businesses";
+import bookingsRouter from "./routes/bookings";
+import reviewsRouter from "./routes/reviews";
 import { openApiSpec } from "./openapi";
 
 export function createApp(): Express {
@@ -48,6 +52,10 @@ export function createApp(): Express {
   // Routes
   app.use("/", healthRouter);
   app.use("/auth", authRouter);
+  app.use("/categories", categoriesRouter);
+  app.use("/businesses", businessesRouter);
+  app.use("/bookings", bookingsRouter);
+  app.use("/reviews", reviewsRouter);
 
   // OpenAPI / Swagger UI
   app.get("/api/docs.json", (_req, res) => res.json(openApiSpec));

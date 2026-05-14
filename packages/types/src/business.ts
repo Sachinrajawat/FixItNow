@@ -1,16 +1,18 @@
 import { z } from "zod";
 import { categorySchema } from "./category";
-import { paginationQuerySchema } from "./common";
+import { paginatedResponseSchema, paginationQuerySchema } from "./common";
 
 export const businessImageSchema = z.object({
   url: z.string().url(),
   alt: z.string().optional(),
 });
 
+export type BusinessImage = z.infer<typeof businessImageSchema>;
+
 export const businessSchema = z.object({
   id: z.string(),
   name: z.string().min(1).max(160),
-  slug: z.string().min(1).max(160),
+  slug: z.string().min(1).max(200),
   about: z.string().max(2000),
   address: z.string().max(300),
   contactPerson: z.string().max(160),
@@ -38,19 +40,27 @@ export const createBusinessBodySchema = z.object({
   about: z.string().trim().min(10).max(2000),
   address: z.string().trim().min(5).max(300),
   contactPerson: z.string().trim().min(2).max(160),
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   phone: z.string().trim().max(40).optional(),
   images: z.array(businessImageSchema).min(1).max(20),
-  categoryId: z.string(),
+  categoryId: z.string().min(1),
   longitude: z.number().min(-180).max(180).optional(),
   latitude: z.number().min(-90).max(90).optional(),
 });
 
 export type CreateBusinessBody = z.infer<typeof createBusinessBodySchema>;
 
+export const updateBusinessBodySchema = createBusinessBodySchema.partial();
+export type UpdateBusinessBody = z.infer<typeof updateBusinessBodySchema>;
+
+export const businessIdParamSchema = z.object({
+  id: z.string().min(1),
+});
+
 export const businessQuerySchema = paginationQuerySchema.extend({
+  /** Category slug, name or ObjectId — resolved server-side. */
   category: z.string().trim().min(1).optional(),
-  q: z.string().trim().min(1).optional(),
+  q: z.string().trim().min(1).max(120).optional(),
   /** Optional "near me": "lng,lat" plus radius in meters. */
   near: z
     .string()
@@ -60,3 +70,7 @@ export const businessQuerySchema = paginationQuerySchema.extend({
 });
 
 export type BusinessQuery = z.infer<typeof businessQuerySchema>;
+
+export const businessListResponseSchema =
+  paginatedResponseSchema(businessSchema);
+export type BusinessListResponse = z.infer<typeof businessListResponseSchema>;

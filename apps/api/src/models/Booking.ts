@@ -54,10 +54,16 @@ const bookingSchema = new Schema<BookingDoc>(
   }
 );
 
-// One business cannot be double-booked for the same date+time.
+// One business cannot be double-booked for the same date+time, but the
+// constraint should only apply to *active* bookings — cancelled slots have
+// to be re-bookable. A partial unique index gives us exactly that.
 bookingSchema.index(
   { business: 1, date: 1, time: 1 },
-  { unique: true, name: "business_date_time_unique" }
+  {
+    unique: true,
+    name: "business_date_time_active_unique",
+    partialFilterExpression: { status: "booked" },
+  }
 );
 // Fast lookups of "my bookings" sorted newest-first.
 bookingSchema.index({ user: 1, createdAt: -1 });

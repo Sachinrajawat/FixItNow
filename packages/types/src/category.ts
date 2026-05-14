@@ -17,3 +17,20 @@ export const createCategoryBodySchema = z.object({
 });
 
 export type CreateCategoryBody = z.infer<typeof createCategoryBodySchema>;
+
+export const updateCategoryBodySchema = createCategoryBodySchema.partial();
+export type UpdateCategoryBody = z.infer<typeof updateCategoryBodySchema>;
+
+/**
+ * URL param schemas. Categories can be addressed by either ObjectId or slug,
+ * so we accept any non-empty string here and resolve in the controller.
+ */
+export const categoryIdParamSchema = z.object({
+  id: z.string().min(1),
+});
+
+export const categoryListResponseSchema = z.object({
+  items: z.array(categorySchema),
+});
+
+export type CategoryListResponse = z.infer<typeof categoryListResponseSchema>;

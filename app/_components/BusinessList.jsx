@@ -3,42 +3,67 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
-const BusinessList = ({ businessList, title }) => {
+const SkeletonCard = () => (
+  <div
+    className="h-[300px] w-full animate-pulse rounded-lg bg-muted"
+    aria-hidden="true"
+  />
+);
+
+const BusinessList = ({ businessList = [], title }) => {
+  const hasResults = businessList.length > 0;
+
   return (
-    <div className="mt-5">
-      <h2 className="font-bold text-[22px]">{title}</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-5">
-        {businessList.length > 0
-          ? businessList.map((business, index) => (
-            
-              <Link 
-              href={"/details/" + business.id}
-                key={index}
-                className="shadow-md rounded-lg hover:shadow-lg cursor-pointer hover:shadow-primary hover:scale-105 transition-all ease-in-out"
-              >
-                <Image
-                  src={business?.images[0].url}
-                  alt={business.name}
-                  width={500}
-                  height={200}
-                  className="h-[150px] md:h-[200px] object-cover rounded-lg"
-                />
-                <div className="flex flex-col items-baseline p-3 gap-1">
-                  <h2 className="p-1 bg-purple-200 text-primary rounded-full px-2 text-[12px]">
-                    {business.category.name}
-                  </h2>
-                  <h2 className="font-bold text-lg">{business.name}</h2>
-                  <h2 className="text-primary">{business.contactPerson}</h2>
-                  <h2 className="text-gray-500 text-sm">{business.address}</h2>
-                  <Button className="rounded-lg mt-3">Book Now</Button>
-                </div>
-              </Link>
-            ))
-          : [1, 2, 3, 4, 5, 6].map((item, index) => (
-              <div key={index} className="w-full h-[300px] bg-gray-200 rounded-lg flex items-center justify-center">   </div>
-            ))}
-      </div>
-    </div>
+    <section aria-labelledby="business-list-heading" className="mt-5">
+      <h2
+        id="business-list-heading"
+        className="text-[22px] font-bold capitalize"
+      >
+        {title}
+      </h2>
+
+      {!hasResults && (
+        <div
+          className="mt-5 grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4"
+          aria-label="Loading services"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={`skeleton-${i}`} />
+          ))}
+        </div>
+      )}
+
+      {hasResults && (
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {businessList.map((business) => (
+            <Link
+              href={`/details/${business.id}`}
+              key={business.id}
+              className="group rounded-lg shadow-md transition-all ease-in-out hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/30"
+            >
+              <Image
+                src={business?.images?.[0]?.url || "/logo.png"}
+                alt={business.name}
+                width={500}
+                height={200}
+                className="h-[150px] w-full rounded-t-lg object-cover md:h-[200px]"
+              />
+              <div className="flex flex-col items-baseline gap-1 p-3">
+                <span className="rounded-full bg-purple-100 px-2 py-1 text-[12px] text-primary">
+                  {business?.category?.name}
+                </span>
+                <h3 className="text-lg font-bold">{business.name}</h3>
+                <p className="text-primary">{business.contactPerson}</p>
+                <p className="text-sm text-muted-foreground">
+                  {business.address}
+                </p>
+                <Button className="mt-3 rounded-lg">Book Now</Button>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </section>
   );
 };
 

@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookingHistoryList from "./_component/BookingHistoryList";
@@ -7,35 +8,33 @@ import { useSession } from "next-auth/react";
 
 const MyBooking = () => {
   const [bookingHistory, setBookingHistory] = useState([]);
-  const { data } = useSession();
+  const { data, status } = useSession();
 
   useEffect(() => {
-    data && GetUserBookingHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+    if (status !== "authenticated" || !data?.user?.email) return;
 
-  const GetUserBookingHistory = () => {
-    GlobalApi.GetUserBookingHistory(data.user.email).then((res) => {
-      setBookingHistory(res.bookings);
-    });
-  };
+    let cancelled = false;
+    GlobalApi.GetUserBookingHistory(data.user.email)
+      .then((res) => {
+        if (!cancelled) setBookingHistory(res?.bookings || []);
+      })
+      .catch((err) => {
+        console.error("Failed to load bookings", err);
+        if (!cancelled) setBookingHistory([]);
+      });
 
-  const filterData = (type) => {
-    const result = bookingHistory.filter((item) =>
-      type == "booked"
-        ? new Date(item.date) >= new Date()
-        : new Date(item.date) <= new Date()
-    );
+    return () => {
+      cancelled = true;
+    };
+  }, [status, data?.user?.email]);
 
-    return result;
-  };
   return (
-    <div className="my-10 mx-5 md:mx-36">
-      <h2 className="font-bold text-[20px] my-2">My Bookings</h2>
+    <div className="mx-5 my-10 md:mx-36">
+      <h1 className="my-2 text-[20px] font-bold">My bookings</h1>
       <Tabs defaultValue="booked" className="w-full">
         <TabsList className="w-full justify-start">
-          <TabsTrigger value="booked">Booked</TabsTrigger>
-          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="booked">Upcoming</TabsTrigger>
+          <TabsTrigger value="completed">Past</TabsTrigger>
         </TabsList>
         <TabsContent value="booked">
           <BookingHistoryList bookingHistory={bookingHistory} type="booked" />

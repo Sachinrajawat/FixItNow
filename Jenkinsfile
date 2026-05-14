@@ -1,57 +1,67 @@
 pipeline {
     agent any
 
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
     environment {
-        REPO_URL = 'https://github.com/Sachinrajawat/FixItNow.git'
-        PROJECT_NAME = 'FixItNow'
+        IMAGE_NAME = 'fixitnow'
+        NODE_VERSION = '20'
     }
 
     stages {
-        stage('Clean Workspace') {
+        stage('Checkout') {
             steps {
-                cleanWs()
+                checkout scm
             }
         }
 
-        stage('Clone Repository') {
+        stage('Install') {
             steps {
-                bat "git clone $REPO_URL"
+                sh 'node --version && npm --version'
+                sh 'npm ci'
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Lint') {
             steps {
-                dir("${PROJECT_NAME}") {
-                    bat 'docker-compose build'
-                }
+                sh 'npm run lint'
             }
         }
 
-        stage('Start Containers') {
+        stage('Test') {
             steps {
-                dir("${PROJECT_NAME}") {
-                    bat 'docker-compose up -d'
-                }
+                sh 'npm test --if-present'
             }
         }
 
-        stage('Verify Running Containers') {
+        stage('Build (Next.js)') {
             steps {
-                bat 'docker ps -a'
+                sh 'npm run build'
+            }
+        }
+
+        stage('Build Docker image') {
+            when { branch 'main' }
+            steps {
+                sh "docker build -t ${IMAGE_NAME}:${env.BUILD_NUMBER} -t ${IMAGE_NAME}:latest ."
             }
         }
     }
 
     post {
         success {
-            mail to: 'sachinrajawat835@gmail.com',
-                 subject: "✅ Build Success - #${env.BUILD_NUMBER}",
-                 body: "Your Jenkins pipeline ran successfully!"
+            echo "Build #${env.BUILD_NUMBER} succeeded."
         }
         failure {
-            mail to: 'sachinrajawat835@gmail.com',
-                 subject: "❌ Build Failed - #${env.BUILD_NUMBER}",
-                 body: "Pipeline failed. Please check Jenkins logs."
+            echo "Build #${env.BUILD_NUMBER} failed. Inspect the console output."
+        }
+        always {
+            cleanWs()
         }
     }
 }

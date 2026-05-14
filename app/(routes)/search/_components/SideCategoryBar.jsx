@@ -27,18 +27,16 @@ const SideCategoryBar = () => {
 
   return (
     <div>
-      <h2 className="font-bold mb-3 text-lg text-primary">Categories</h2>
+      <h2 className="mb-3 text-lg font-bold text-primary">Categories</h2>
       <div>
         {categoryList.map((category, index) => (
           <Link
             href={"/search/" + category.name}
             key={index}
-            className={`flex gap-2 p-3 border rounded-lg mb-3 md:mr-10 cursor-pointer hover:bg-purple-50 hover:shadow-md items-center hover:text-primary hover:border-primary
-            ${
+            className={`mb-3 flex cursor-pointer items-center gap-2 rounded-lg border p-3 hover:border-primary hover:bg-purple-50 hover:text-primary hover:shadow-md md:mr-10 ${
               selectedCategory == category.name &&
-              "border-primary text-primary shadow-md bg-purple-50"
-            }
-             `}
+              "border-primary bg-purple-50 text-primary shadow-md"
+            } `}
           >
             <Image src={category.icon.url} alt="icon" width={30} height={30} />
             <h2>{category.name}</h2>

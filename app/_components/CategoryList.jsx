@@ -2,34 +2,41 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 
-const CategoryList = ({ categoryList }) => {
+const SkeletonTile = () => (
+  <div
+    className="h-[120px] w-full animate-pulse rounded-lg bg-muted"
+    aria-hidden="true"
+  />
+);
+
+const CategoryList = ({ categoryList = [] }) => {
+  const hasResults = categoryList.length > 0;
+
   return (
-    <div className="mx-4 md:mx-22 lg:mx-52 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-      {categoryList.length > 0
-        ? categoryList.map((category, index) => (
+    <nav
+      aria-label="Service categories"
+      className="md:mx-22 mx-4 mt-2 grid grid-cols-3 gap-4 md:grid-cols-4 lg:mx-52 lg:grid-cols-6"
+    >
+      {hasResults
+        ? categoryList.map((category) => (
             <Link
-              href={"/search/" + category.name}
-              key={index}
-              className={`flex flex-col items-center justify-center gap-2 bg-purple-50 p-5 rounded-lg cursor-pointer hover:scale-110 transition-all ease-in-out`}
+              href={`/search/${encodeURIComponent(category.name)}`}
+              key={category.id}
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg bg-purple-50 p-5 transition-all ease-in-out hover:scale-105"
             >
               <Image
                 src={category.icon.url}
-                alt="image-category"
+                alt={`${category.name} icon`}
                 width={35}
                 height={35}
               />
-              <h2 className="text-primary">{category.name}</h2>
+              <span className="text-primary">{category.name}</span>
             </Link>
           ))
-        : [1, 2, 3, 4, 5, 6].map((item, index) => (
-            <div
-              key={index}
-              className="h-[120px]
-        w-full bg-slate-200 animate-pulse
-        rounded-lg"
-            ></div>
+        : Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonTile key={`category-skeleton-${i}`} />
           ))}
-    </div>
+    </nav>
   );
 };
 

@@ -1,13 +1,22 @@
 {
-  "name": "sahreen_home_service",
+  "name": "fixitnow",
   "version": "0.1.0",
   "private": true,
+  "description": "FixItNow - a full-stack home services marketplace where users can discover, book and review local service providers.",
+  "author": "Sachin Rajawat <sachinrajawat835@gmail.com>",
+  "license": "MIT",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "echo \"No tests specified\" && exit 0"
+    "lint:fix": "next lint --fix",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "echo \"Typecheck will be enabled in Phase 1 (TypeScript migration)\" && exit 0",
+    "test": "echo \"Tests will be added in Phase 1\" && exit 0",
+    "docker:dev": "docker compose up --build",
+    "docker:prod": "docker build -f Dockerfile -t fixitnow:latest . && docker run -p 3000:3000 --env-file .env fixitnow:latest"
   },
   "dependencies": {
     "@descope/nextjs-sdk": "^0.0.7",
@@ -36,7 +45,14 @@
   "devDependencies": {
     "autoprefixer": "^10.0.1",
     "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.1.4",
     "postcss": "^8",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.6",
     "tailwindcss": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=18.17.0"
   }
 }

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar";
+"use client";
 
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Sheet,
   SheetContent,
@@ -17,150 +18,137 @@ import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import moment from "moment";
 
+const generateTimeSlots = () => {
+  const slots = [];
+  for (let i = 10; i <= 12; i++) {
+    slots.push({ time: `${i}:00 AM` });
+    slots.push({ time: `${i}:30 AM` });
+  }
+  for (let i = 1; i <= 6; i++) {
+    slots.push({ time: `${i}:00 PM` });
+    slots.push({ time: `${i}:30 PM` });
+  }
+  return slots;
+};
+
 const BookingSection = ({ children, business }) => {
   const [date, setDate] = useState(new Date());
-  const [timeSlot, setTimeSlot] = useState([]);
-  const [selectedTime, setSelectedTime] = useState();
-  const [bookedSlot, setBookedSlot] = useState([]);
+  const [selectedTime, setSelectedTime] = useState("");
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
   const { data } = useSession();
 
-  useEffect(() => {
-    getTime();
-  }, []);
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+
+  const fetchBookedSlots = useCallback(() => {
+    if (!business?.id || !date) return;
+    GlobalApi.BusinessBookedSlot(business.id, moment(date).format("DD-MM-YYYY"))
+      .then((res) => setBookedSlots(res.bookings || []))
+      .catch((err) => {
+        console.error("Failed to load booked slots", err);
+        setBookedSlots([]);
+      });
+  }, [business?.id, date]);
 
   useEffect(() => {
-    date && BusinessBookedSlot();
-  }, [date]);
+    fetchBookedSlots();
+  }, [fetchBookedSlots]);
 
-  const BusinessBookedSlot = () => {
-    GlobalApi.BusinessBookedSlot(
-      business.id,
-      moment(date).format("DD-MM-YYYY")
-    ).then((res) => {
-      setBookedSlot(res.bookings);
-    });
-  };
-  const getTime = () => {
-    const timeList = [];
-    for (let i = 10; i <= 12; i++) {
-      timeList.push({
-        time: i + ":00 AM",
-      });
-      timeList.push({
-        time: i + ":30 AM",
-      });
-    }
-    for (let i = 1; i <= 6; i++) {
-      timeList.push({
-        time: i + ":00 PM",
-      });
-      timeList.push({
-        time: i + ":30 PM",
-      });
-    }
-
-    setTimeSlot(timeList);
-  };
-
-  // const saveBooking = () => {
-  //   GlobalApi.createNewBooking(
-  //     business.id,
-  //     moment(date).format("DD-MM-YYYY"),
-  //     selectedTime,
-  //     data.user.email,
-  //     data.user.name
-  //   ).then(
-  //     (res) => {
-  //       if (res) {
-  //         setDate();
-  //         setSelectedTime("");
-  //         toast("success to book the service");
-  //       }
-  //     },
-  //     (e) => {
-  //       toast("error!!! Something is wrong! Please try again!!!");
-  //     }
-  //   );
-  // };
+  const isBooked = useCallback(
+    (time) => bookedSlots.some((item) => item.time === time),
+    [bookedSlots]
+  );
 
   const saveBooking = async () => {
+    if (!data?.user?.email) {
+      toast.error("Please sign in before booking.");
+      return;
+    }
+    if (!date || !selectedTime) {
+      toast.error("Please pick a date and a time slot.");
+      return;
+    }
+
     try {
-      const response = await GlobalApi.createNewBooking(
+      setSubmitting(true);
+      await GlobalApi.createNewBooking(
         business.id,
         moment(date).format("DD-MM-YYYY"),
         selectedTime,
         data.user.email,
         data.user.name
       );
-      
-      if (response) {
-        setDate(null);
-        setSelectedTime("");
-        toast("Successfully booked the service");
-      }
+      setDate(new Date());
+      setSelectedTime("");
+      toast.success("Booking confirmed!");
     } catch (error) {
-      console.error('Booking error:', error);
-      toast("Error! Something went wrong! Please try again!");
+      console.error("Booking error:", error);
+      toast.error("Could not complete the booking. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const isBooked = (time) => {
-    return bookedSlot.find((item) => item.time === time);
-  };
   return (
     <div>
       <Sheet>
         <SheetTrigger asChild>{children}</SheetTrigger>
         <SheetContent className="overflow-auto">
           <SheetHeader>
-            <SheetTitle>Book an Service</SheetTitle>
+            <SheetTitle>Book a service</SheetTitle>
             <SheetDescription>
-              Select Date and Time slot to book an service
+              Select a date and time slot to book this service.
             </SheetDescription>
-            {/* Move the content outside of SheetDescription */}
-            <div className="flex flex-col gap-5 items-baseline">
-              <h2 className="mt-5 font-bold">Select Date</h2>
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border"
-              />
-            </div>
-            <div>
-              <h2 className="my-5 font-bold">Select Time Slot</h2>
-              <div className="grid grid-cols-3 gap-3">
-                {timeSlot.map((item, index) => (
+          </SheetHeader>
+
+          <div className="mt-4 flex flex-col items-baseline gap-5">
+            <h3 className="font-bold">Select date</h3>
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(d) => setDate(d)}
+              disabled={{ before: new Date() }}
+              className="rounded-md border"
+            />
+          </div>
+
+          <div className="mt-6">
+            <h3 className="mb-3 font-bold">Select time slot</h3>
+            <div className="grid grid-cols-3 gap-3">
+              {timeSlots.map((item) => {
+                const booked = isBooked(item.time);
+                const active = selectedTime === item.time;
+                return (
                   <Button
-                    key={index}
-                    variant="outiline"
-                    disabled={isBooked(item.time)}
-                    className={`border rounded-full p-2 px-3 hover:bg-primary hover:text-white ${
-                      selectedTime == item.time && "bg-primary text-white"
+                    key={item.time}
+                    type="button"
+                    variant="outline"
+                    disabled={booked}
+                    aria-pressed={active}
+                    className={`rounded-full border p-2 px-3 ${
+                      active ? "bg-primary text-white" : ""
                     }`}
                     onClick={() => setSelectedTime(item.time)}
                   >
                     {item.time}
                   </Button>
-                ))}
-              </div>
+                );
+              })}
             </div>
-          </SheetHeader>
-          <SheetFooter className="mt-5">
-            <SheetClose asChild>
-              <div className="flex gap-5">
-                <Button variant="destructive" className="">
-                  Cancel
-                </Button>
+          </div>
 
-                <Button
-                  disabled={!(selectedTime && date)}
-                  onClick={() => saveBooking()}
-                >
-                  Book
-                </Button>
-              </div>
-            </SheetClose>
+          <SheetFooter className="mt-6">
+            <div className="flex gap-3">
+              <SheetClose asChild>
+                <Button variant="destructive">Cancel</Button>
+              </SheetClose>
+              <Button
+                disabled={!selectedTime || !date || submitting}
+                onClick={saveBooking}
+              >
+                {submitting ? "Booking…" : "Book"}
+              </Button>
+            </div>
           </SheetFooter>
         </SheetContent>
       </Sheet>

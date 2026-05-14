@@ -1,9 +1,9 @@
-version: '3'
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    container_name: fixitnow-web
     ports:
       - "3000:3000"
     env_file:
@@ -13,3 +13,4 @@ services:
       - /app/node_modules
       - /app/.next
     command: npm run dev
+    restart: unless-stopped

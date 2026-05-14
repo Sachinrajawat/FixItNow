@@ -1,15 +1,19 @@
-version: '3'
+# Example dev compose file. Copy to docker-compose.yml and adjust as needed.
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    container_name: fixitnow-web
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_MASTER_URL_KEY=your_key_here
-      - DESCOPE_CLIENT_ID=your_client_id_here
-      - DESCOPE_CLIENT_SECRET=your_client_secret_here
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_MASTER_URL_KEY: your_hygraph_project_id
+      DESCOPE_CLIENT_ID: your_descope_client_id
+      DESCOPE_CLIENT_SECRET: your_descope_client_secret
+      NEXTAUTH_SECRET: replace_with_a_random_string
+      NEXTAUTH_URL: http://localhost:3000
     volumes:
       - .:/app
       - /app/node_modules

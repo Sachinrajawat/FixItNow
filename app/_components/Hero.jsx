@@ -1,28 +1,65 @@
+"use client";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
-import React from "react";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
 
 const Hero = () => {
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    router.push(`/search/${encodeURIComponent(trimmed)}`);
+  };
+
   return (
-    <div className="flex items-center gap-3 flex-col justify-center pt-14 pb-7">
-      <h2 className="font-bold text-[46px] text-center">
+    <section
+      aria-labelledby="hero-heading"
+      className="flex flex-col items-center justify-center gap-3 pb-7 pt-14"
+    >
+      <h1
+        id="hero-heading"
+        className="text-center text-4xl font-bold sm:text-[46px]"
+      >
         Find Home
-        <span className="text-primary"> Service/Repair</span> <br /> Near You
-      </h2>
-      <h2 className="text-xl text-gray-400">
-        Explore Best Home Service & Repair Near you
-      </h2>
-      <div className="mt-4 flex items-center gap-3">
+        <span className="text-primary"> Service / Repair</span>
+        <br /> Near You
+      </h1>
+      <p className="text-center text-lg text-muted-foreground sm:text-xl">
+        Discover trusted home-service professionals in your city.
+      </p>
+
+      <form
+        role="search"
+        onSubmit={handleSubmit}
+        className="mt-4 flex w-full max-w-xl items-center gap-3 px-4 sm:px-0"
+      >
+        <label htmlFor="hero-search" className="sr-only">
+          Search for a service
+        </label>
         <Input
-          placeholder="search"
-          className="rounded-full w-[400px] h-[50px]"
+          id="hero-search"
+          type="search"
+          name="q"
+          placeholder="Search for cleaning, plumbing, repair…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="h-[50px] flex-1 rounded-full"
         />
-        <Button className="rounded-full h-[50px]">
+        <Button
+          type="submit"
+          aria-label="Search services"
+          className="h-[50px] rounded-full"
+        >
           <Search className="h-4 w-4" />
         </Button>
-      </div>
-    </div>
+      </form>
+    </section>
   );
 };
 

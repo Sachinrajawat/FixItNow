@@ -1,12 +1,17 @@
-import React from "react";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "About FixItNow",
   description:
     "FixItNow is a full-stack home-services marketplace built with Next.js, designed to make it easy to discover and book trusted local professionals.",
 };
 
-const features = [
+interface Feature {
+  title: string;
+  body: string;
+}
+
+const features: Feature[] = [
   {
     title: "Curated professionals",
     body: "Every business listed on FixItNow is reviewed for quality and reliability before going live.",
@@ -56,9 +61,10 @@ const AboutPage = () => {
       <section className="mt-12">
         <h2 className="text-xl font-bold">Tech stack</h2>
         <p className="text-muted-foreground mt-2 text-sm">
-          Built with Next.js 14 (App Router), Tailwind CSS, shadcn/ui, NextAuth
-          + Descope for authentication, and Hygraph as the headless CMS.
-          Containerised with Docker, with CI/CD via GitHub Actions.
+          Built with Next.js 14 (App Router), Tailwind CSS, shadcn/ui, a custom
+          Express + Mongoose + Redis API, JWT-based auth with rotating refresh
+          tokens, and a fully typed shared `@fixitnow/types` package powered by
+          Zod. Containerised with Docker, with CI/CD via GitHub Actions.
         </p>
       </section>
     </article>

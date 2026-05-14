@@ -38,11 +38,10 @@ It is split into two deployable apps that share a single source of truth for the
 ```mermaid
 flowchart LR
     User[Browser] -->|HTTPS| Web[Next.js 14 web app]
-    Web -->|REST + JSON| Api[Express API]
+    Web -->|REST + JSON / Bearer JWT| Api[Express API]
     Api -->|Mongoose| Mongo[(MongoDB)]
     Api -->|ioredis| Redis[(Redis)]
-    Web -->|OIDC| Auth[Descope]
-    Api -.->|JWT cookie| Web
+    Api -.->|HttpOnly refresh cookie| Web
     Web -->|errors| Sentry[(Sentry)]
     Api -->|errors| Sentry
 ```
@@ -86,8 +85,8 @@ fixitnow/
 | Backend          | Express 4, Mongoose 8, ioredis, Pino, Helmet, cors, compression          |
 | Validation       | Zod (shared `@fixitnow/types` workspace)                                 |
 | API docs         | OpenAPI 3.0 + Swagger UI at `/api/docs`                                  |
-| Auth (web)       | NextAuth.js with a Descope OIDC provider                                 |
-| Auth (api)       | JWT access + refresh (Phase 2 Step 2)                                    |
+| Auth (web)       | Cookie + JWT against `apps/api/auth/*` (no third-party provider)         |
+| Auth (api)       | JWT access (15 m) + rotating refresh (7 d) with Redis allowlist          |
 | Tests            | Vitest + RTL + jsdom (web), Jest + Supertest (api)                       |
 | Observability    | Sentry (client + server + edge), structured logs with request id         |
 | Tooling          | ESLint, Prettier, Husky + lint-staged                                    |
@@ -136,18 +135,11 @@ docker compose up --build
 
 ### `apps/web` (`.env.local`)
 
-| Variable                     | Required | Description                                             |
-| ---------------------------- | :------: | ------------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`       |    no    | Used for SEO/OpenGraph (`metadataBase`).                |
-| `NEXT_PUBLIC_API_URL`        |   yes    | Base URL of the API (e.g. `http://localhost:4000`).     |
-| `NEXT_PUBLIC_MASTER_URL_KEY` |  yes\*   | Hygraph project id (will be removed in Phase 2 Step 3). |
-| `DESCOPE_CLIENT_ID`          |  yes\*   | Descope OIDC client id.                                 |
-| `DESCOPE_CLIENT_SECRET`      |  yes\*   | Descope OIDC client secret.                             |
-| `NEXTAUTH_SECRET`            |   yes    | NextAuth JWT signing secret. ≥ 16 chars.                |
-| `NEXTAUTH_URL`               |   yes    | Public URL of the web app.                              |
-| `NEXT_PUBLIC_SENTRY_DSN`     |    no    | Optional client-side Sentry DSN.                        |
-
-\* Hygraph + Descope are temporary — Phase 2 Step 3 swaps to the in-house API + JWT auth.
+| Variable                 | Required | Description                                         |
+| ------------------------ | :------: | --------------------------------------------------- |
+| `NEXT_PUBLIC_SITE_URL`   |    no    | Used for SEO/OpenGraph (`metadataBase`).            |
+| `NEXT_PUBLIC_API_URL`    |   yes    | Base URL of the API (e.g. `http://localhost:4000`). |
+| `NEXT_PUBLIC_SENTRY_DSN` |    no    | Optional client-side Sentry DSN.                    |
 
 ### `apps/api` (`.env`)
 
@@ -232,7 +224,7 @@ A [`Jenkinsfile`](./Jenkinsfile) mirrors the pipeline for self-hosted Jenkins us
 - [x] **Phase 1 — TS & quality**: TypeScript migration (strict), ESLint/Prettier/Husky/lint-staged, env validation with Zod, Vitest + React Testing Library, Sentry.
 - [x] **Phase 2, Step 1 — Monorepo + API skeleton**: npm workspaces (`apps/web`, `apps/api`, `packages/types`); Express + TS + MongoDB + Redis API with health probes, request id, structured logging, Helmet, cors, validation middleware, AppError, Swagger UI; first integration tests with Jest + Supertest; Docker compose stack with mongo + redis + api + web.
 - [x] **Phase 2, Step 2 — Auth & models**: User/Category/Business/Booking/Review Mongoose models with proper indexes (compound, text, geospatial, unique); bcrypt password hashing; JWT access (15 m) + refresh (7 d) with Redis allowlist + single-use rotation + global revocation on logout; httpOnly+SameSite refresh cookie scoped to /auth; `requireAuth` + `requireRole` middlewares; full integration test suite against MongoMemoryServer + ioredis-mock.
-- [ ] **Phase 2, Step 3 — Endpoints & web migration**: full CRUD endpoints; Redis caching; rate limiting; seed script; remove Hygraph from `apps/web` and rewire to `apps/api`.
+- [x] **Phase 2, Step 3 — Endpoints & web migration**: full CRUD for `/categories`, `/businesses` (text + category + paginated + `?near=lng,lat&radius=` geo search), `/bookings` (create / list-mine / cancel with double-booking prevented by a partial unique index), `/reviews` (with idempotent business `ratingAvg`/`ratingCount` aggregation); Redis cache-aside on GET endpoints + Redis-backed rate limiting on POSTs; `npm run seed` script with realistic data; integration tests for every endpoint against MongoMemoryServer. On the web side: typed `lib/apiClient.ts` (fetch + auto-refresh on 401 + abort), `AuthProvider` powered by the API's cookie+JWT flow, dedicated `/login` and `/signup` pages with react-hook-form + Zod, Hygraph + NextAuth + Descope removed entirely, every remaining `.jsx` file converted to `.tsx`.
 - [ ] **Phase 3 — Headline features**: reviews & ratings, Stripe (test mode) payments, geo-search, admin dashboard with RBAC, email confirmations, BullMQ background jobs.
 - [ ] **Phase 4 — Polish & deploy**: per-page SEO metadata, sitemap, robots, JSON-LD, accessibility audit, performance budget, deployment to Vercel + Render + MongoDB Atlas, screenshots, architecture diagram, demo video.
 

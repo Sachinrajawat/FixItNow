@@ -1,7 +1,7 @@
-import React from "react";
+import type { ReactNode } from "react";
 import SideCategoryBar from "./_components/SideCategoryBar";
 
-const SearchLayout = ({ children }) => {
+const SearchLayout = ({ children }: { children: ReactNode }) => {
   return (
     <div className="mt-8 grid grid-cols-1 md:grid-cols-4">
       <aside className="hidden md:block">

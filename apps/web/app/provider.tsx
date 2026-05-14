@@ -1,16 +1,12 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
+import { AuthProvider } from "@/lib/auth-context";
 
-export default function NextAuthSessionProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <SessionProvider>
+    <AuthProvider>
       <ThemeProvider
         attribute="class"
         defaultTheme="system"
@@ -19,6 +15,6 @@ export default function NextAuthSessionProvider({
       >
         {children}
       </ThemeProvider>
-    </SessionProvider>
+    </AuthProvider>
   );
 }

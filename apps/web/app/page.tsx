@@ -3,56 +3,52 @@
 import { useEffect, useState } from "react";
 import Hero from "./_components/Hero";
 import CategoryList from "./_components/CategoryList";
-import GlobalApi from "./_services/GlobalApi";
 import BusinessList from "./_components/BusinessList";
+import { api } from "@/lib/apiClient";
 import type { Business, Category } from "@/types";
-
-interface CategoriesResponse {
-  categories: Category[];
-}
-
-interface BusinessesResponse {
-  businessLists: Business[];
-}
 
 export default function Home() {
   const [categoryList, setCategoryList] = useState<Category[]>([]);
   const [businessList, setBusinessList] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
+    setLoading(true);
 
-    Promise.allSettled<
-      [Promise<CategoriesResponse>, Promise<BusinessesResponse>]
-    >([
-      GlobalApi.getCategory() as Promise<CategoriesResponse>,
-      GlobalApi.getAllBusinessDetails() as Promise<BusinessesResponse>,
+    Promise.allSettled([
+      api.categories.list(controller.signal),
+      api.businesses.list({ limit: 8, signal: controller.signal }),
     ]).then(([categoriesRes, businessesRes]) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
 
       if (categoriesRes.status === "fulfilled") {
-        setCategoryList(categoriesRes.value?.categories || []);
+        setCategoryList(categoriesRes.value.items);
       } else {
         console.error("Failed to load categories", categoriesRes.reason);
       }
 
       if (businessesRes.status === "fulfilled") {
-        setBusinessList(businessesRes.value?.businessLists || []);
+        setBusinessList(businessesRes.value.items);
       } else {
         console.error("Failed to load businesses", businessesRes.reason);
       }
+
+      setLoading(false);
     });
 
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, []);
 
   return (
     <div>
       <Hero />
-      <CategoryList categoryList={categoryList} />
-      <BusinessList businessList={businessList} title="Popular services" />
+      <CategoryList categoryList={categoryList} loading={loading} />
+      <BusinessList
+        businessList={businessList}
+        title="Popular services"
+        loading={loading}
+      />
     </div>
   );
 }

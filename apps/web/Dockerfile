@@ -23,11 +23,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build-time environment placeholders. Real secrets are injected at runtime.
-ARG NEXT_PUBLIC_MASTER_URL_KEY="placeholder"
+# Build-time environment placeholders. Real values are injected at runtime.
 ARG NEXT_PUBLIC_SITE_URL="http://localhost:3000"
-ENV NEXT_PUBLIC_MASTER_URL_KEY=$NEXT_PUBLIC_MASTER_URL_KEY
+ARG NEXT_PUBLIC_API_URL="http://localhost:4000"
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 RUN npm run build
 

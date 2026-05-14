@@ -3,7 +3,7 @@ import { Outfit } from "next/font/google";
 import "./globals.css";
 import Header from "./_components/Header";
 import Footer from "./_components/Footer";
-import NextAuthSessionProvider from "./provider";
+import AppProviders from "./provider";
 import { Toaster } from "sonner";
 import { env } from "@/lib/env";
 
@@ -51,14 +51,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={outfit.className}>
-        <NextAuthSessionProvider>
+        <AppProviders>
           <div className="flex min-h-screen flex-col">
             <Header />
             <main className="mx-6 flex-1 md:mx-16">{children}</main>
             <Footer />
           </div>
           <Toaster richColors position="top-right" />
-        </NextAuthSessionProvider>
+        </AppProviders>
       </body>
     </html>
   );

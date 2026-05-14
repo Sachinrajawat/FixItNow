@@ -9,10 +9,13 @@ const nextConfig = {
     instrumentationHook: true,
   },
   images: {
+    // Phase 2 Step 3: remote business/category images are served `unoptimized`
+    // because the API can return arbitrary HTTPS URLs. We keep a few common
+    // hosts whitelisted in case a caller wants to opt-in to optimisation.
     remotePatterns: [
-      { protocol: "https", hostname: "ap-south-1.graphassets.com" },
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
-      { protocol: "https", hostname: "media.graphassets.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "cdn-icons-png.flaticon.com" },
     ],
   },
 };

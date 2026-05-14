@@ -44,11 +44,6 @@ jobs:
         env:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
           NEXT_PUBLIC_API_URL: http://localhost:4000
-          NEXT_PUBLIC_MASTER_URL_KEY: ${{ secrets.NEXT_PUBLIC_MASTER_URL_KEY || 'placeholder' }}
-          DESCOPE_CLIENT_ID: ${{ secrets.DESCOPE_CLIENT_ID || 'placeholder' }}
-          DESCOPE_CLIENT_SECRET: ${{ secrets.DESCOPE_CLIENT_SECRET || 'placeholder' }}
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'placeholder_secret_for_build_only_long_enough' }}
-          NEXTAUTH_URL: http://localhost:3000
         run: npm run build:web
 
       - name: Build api

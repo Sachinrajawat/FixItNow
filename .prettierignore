@@ -1,8 +1,16 @@
 node_modules
+**/node_modules
 .next
+**/.next
 .vercel
 out
+**/out
 build
+**/build
+dist
+**/dist
 coverage
+**/coverage
 package-lock.json
-public
+**/package-lock.json
+**/public

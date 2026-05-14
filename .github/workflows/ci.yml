@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, typecheck, test, build
+    name: Lint, typecheck, test, build (all workspaces)
     runs-on: ubuntu-latest
 
     steps:
@@ -25,33 +25,37 @@ jobs:
           node-version: 20
           cache: "npm"
 
-      - name: Install dependencies
+      - name: Install dependencies (npm workspaces)
         run: npm ci
+
+      - name: Format check (workspace-wide)
+        run: npm run format
 
       - name: Lint
         run: npm run lint
-
-      - name: Format check
-        run: npm run format
 
       - name: Typecheck
         run: npm run typecheck
 
       - name: Test
-        run: npm test -- --reporter=verbose
+        run: npm test
 
-      - name: Build (Next.js)
+      - name: Build web
         env:
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
+          NEXT_PUBLIC_API_URL: http://localhost:4000
           NEXT_PUBLIC_MASTER_URL_KEY: ${{ secrets.NEXT_PUBLIC_MASTER_URL_KEY || 'placeholder' }}
           DESCOPE_CLIENT_ID: ${{ secrets.DESCOPE_CLIENT_ID || 'placeholder' }}
           DESCOPE_CLIENT_SECRET: ${{ secrets.DESCOPE_CLIENT_SECRET || 'placeholder' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'placeholder_secret_for_build_only_long_enough' }}
           NEXTAUTH_URL: http://localhost:3000
-        run: npm run build
+        run: npm run build:web
+
+      - name: Build api
+        run: npm run build:api
 
   docker:
-    name: Build production Docker image
+    name: Build production Docker images
     runs-on: ubuntu-latest
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -63,12 +67,22 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build production image (no push)
+      - name: Build api image (no push)
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./apps/api/Dockerfile
           push: false
-          tags: fixitnow:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: fixitnow-api:latest
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Build web image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          file: ./apps/web/Dockerfile
+          push: false
+          tags: fixitnow-web:latest
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max

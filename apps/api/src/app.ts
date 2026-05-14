@@ -11,6 +11,7 @@ import { logger } from "./config/logger";
 import { requestId } from "./middlewares/requestId";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler";
 import healthRouter from "./routes/health";
+import authRouter from "./routes/auth";
 import { openApiSpec } from "./openapi";
 
 export function createApp(): Express {
@@ -46,6 +47,7 @@ export function createApp(): Express {
 
   // Routes
   app.use("/", healthRouter);
+  app.use("/auth", authRouter);
 
   // OpenAPI / Swagger UI
   app.get("/api/docs.json", (_req, res) => res.json(openApiSpec));

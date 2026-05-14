@@ -5,7 +5,7 @@
   "description": "FixItNow web app (Next.js 14 + TypeScript).",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm --prefix ../.. run build:types && next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",

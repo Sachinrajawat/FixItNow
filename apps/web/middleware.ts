@@ -23,5 +23,8 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/mybooking/:path*", "/details/:path*"],
+  // /admin is also matched: this guard only verifies *authentication* —
+  // the role check (admin only) is enforced by AdminGate inside the
+  // /admin layout once the user has loaded.
+  matcher: ["/mybooking/:path*", "/details/:path*", "/admin/:path*"],
 };

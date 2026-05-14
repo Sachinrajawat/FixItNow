@@ -101,6 +101,11 @@ const Header = () => {
               <DropdownMenuItem asChild>
                 <Link href="/mybooking">My bookings</Link>
               </DropdownMenuItem>
+              {user.role === "admin" && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin">Admin console</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={handleLogout}
                 className="text-destructive focus:text-destructive"

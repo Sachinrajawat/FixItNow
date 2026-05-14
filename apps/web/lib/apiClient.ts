@@ -211,6 +211,7 @@ import type {
   Category,
   CategoryListResponse,
   CreateCategoryBody,
+  UpdateCategoryBody,
   Booking,
   BookingListResponse,
   BookingListMineQuery,
@@ -305,6 +306,17 @@ export const api = {
       return request<Category>("/categories", {
         method: "POST",
         body,
+      });
+    },
+    update(id: string, body: UpdateCategoryBody): Promise<Category> {
+      return request<Category>(`/categories/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body,
+      });
+    },
+    remove(id: string): Promise<void> {
+      return request<void>(`/categories/${encodeURIComponent(id)}`, {
+        method: "DELETE",
       });
     },
   },

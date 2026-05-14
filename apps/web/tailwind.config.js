@@ -1,11 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class"],
+  // Tailwind's content scanner determines which utility classes survive
+  // the production purge. After the TS migration every component is
+  // `.ts` / `.tsx`, so we must include those extensions here — otherwise
+  // `next build` ships an essentially empty CSS bundle and the deployed
+  // site renders completely unstyled.
   content: [
-    "./pages/**/*.{js,jsx}",
-    "./components/**/*.{js,jsx}",
-    "./app/**/*.{js,jsx}",
-    "./src/**/*.{js,jsx}",
+    "./pages/**/*.{js,jsx,ts,tsx,mdx}",
+    "./components/**/*.{js,jsx,ts,tsx,mdx}",
+    "./app/**/*.{js,jsx,ts,tsx,mdx}",
+    "./src/**/*.{js,jsx,ts,tsx,mdx}",
   ],
   prefix: "",
   theme: {

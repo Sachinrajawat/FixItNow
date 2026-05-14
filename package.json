@@ -26,7 +26,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
     "docker:dev": "docker compose up --build",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

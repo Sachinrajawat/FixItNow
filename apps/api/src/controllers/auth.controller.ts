@@ -17,17 +17,34 @@ import { env } from "../config/env";
 const REFRESH_COOKIE = "fin_rt";
 
 function setRefreshCookie(res: Response, token: string) {
+  // In production the web (Vercel) and the API (Render) live on different
+  // sites. A SameSite=Lax cookie can be SET on a cross-site response but
+  // is NOT sent on cross-site subresource fetches — so a new tab calling
+  // POST /auth/refresh from the browser would silently fail and log the
+  // user out. SameSite=None unblocks cross-site send, and the browser
+  // requires it to be paired with Secure (HTTPS-only).
+  //
+  // Local dev stays on Lax because (a) we don't ship HTTPS on localhost
+  // so Secure would prevent the cookie being set at all, and (b)
+  // localhost:3000 ↔ localhost:4000 count as same-site so Lax already
+  // permits the cross-port fetch.
+  const isProd = env.NODE_ENV === "production";
   res.cookie(REFRESH_COOKIE, token, {
     httpOnly: true,
-    secure: env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
     path: "/auth",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
 function clearRefreshCookie(res: Response) {
-  res.clearCookie(REFRESH_COOKIE, { path: "/auth" });
+  const isProd = env.NODE_ENV === "production";
+  res.clearCookie(REFRESH_COOKIE, {
+    path: "/auth",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+  });
 }
 
 function userToJson(doc: InstanceType<typeof User>): AuthResponse["user"] {

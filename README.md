@@ -3,243 +3,172 @@
 <img src="./apps/web/public/screen.png" alt="FixItNow screenshot" />
 
 <h1>FixItNow</h1>
-<p><strong>A full-stack home-services marketplace.</strong><br/>
-Next.js 14 frontend, Express + MongoDB + Redis backend, all in TypeScript.</p>
+<p><strong>A production-shaped home-services marketplace.</strong><br/>
+TypeScript end-to-end. Next.js 14 web, Express + Mongoose + Redis API, shared Zod schemas.</p>
+
+<p>
+  <a href="https://fix-it-now-web-in9h.vercel.app"><strong>Live demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://fixitnow-api.onrender.com/api/docs"><strong>API docs</strong></a>
+  &nbsp;·&nbsp;
+  <a href="./DEPLOY.md">Deploy guide</a>
+</p>
 
 </div>
 
----
-
-## Table of contents
-
-1. [About](#about)
-2. [Architecture](#architecture)
-3. [Monorepo layout](#monorepo-layout)
-4. [Tech stack](#tech-stack)
-5. [Quick start](#quick-start)
-6. [Environment variables](#environment-variables)
-7. [Useful scripts](#useful-scripts)
-8. [Running with Docker](#running-with-docker)
-9. [Testing & quality](#testing--quality)
-10. [CI/CD](#cicd)
-11. [Deployment](#deployment)
-12. [Roadmap](#roadmap)
-13. [License](#license)
+> **Demo accounts** (seeded — rotate before reuse):
+> <br/>• Admin: `admin@fixitnow.dev` / `Admin#12345`
+> <br/>• Customer: `demo@fixitnow.dev` / `Demo#12345`
+> <br/>• Business owner: `owner@fixitnow.dev` / `Owner#12345`
 
 ---
 
-## About
+## What it does
 
-FixItNow connects homeowners with verified service providers — cleaning, plumbing, electrical, repairs and more. The codebase is intentionally structured the way a small product team would build it: feature-folder routing, a thin service layer, layered backend architecture, route protection via middleware, error/loading boundaries, accessibility, observability, and an opinionated CI pipeline.
+A homeowner pastes a category or a free-text query, gets a list of nearby
+services (filterable by `?near=lng,lat&radius=`), opens a business profile
+with photos and reviews, picks a free time slot, books it, and manages
+everything from a "My bookings" tab. Owners list businesses; admins manage
+the catalog.
 
-It is split into two deployable apps that share a single source of truth for their domain types.
+| Feature                                                                                    | Status     |
+| ------------------------------------------------------------------------------------------ | ---------- |
+| Auth (signup, login, refresh, logout) — JWT access + rotating refresh on a Redis allowlist | ✅         |
+| Categories CRUD with Redis cache-aside + invalidation                                      | ✅         |
+| Businesses CRUD with text search, category filter, pagination, and 2dsphere geo search     | ✅         |
+| Bookings (create / list-mine / cancel) — race-safe double-booking prevention               | ✅         |
+| Reviews with idempotent `ratingAvg` / `ratingCount` aggregation                            | ✅         |
+| Optimistic UI for ratings on the details page                                              | ✅         |
+| `/admin/categories` dashboard with RBAC (admin role gate end-to-end)                       | ✅         |
+| SEO: dynamic sitemap, robots, `LocalBusiness` JSON-LD on `/details/[id]`                   | ✅         |
+| Auto-generated OpenAPI 3.0 from the shared Zod schemas, served at `/api/docs`              | ✅         |
+| Stripe test-mode payments, email confirmations, BullMQ jobs                                | 🔜 roadmap |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     User[Browser] -->|HTTPS| Web[Next.js 14 web app]
-    Web -->|REST + JSON / Bearer JWT| Api[Express API]
+    Web -->|REST + JSON, Bearer JWT| Api[Express API]
     Api -->|Mongoose| Mongo[(MongoDB)]
     Api -->|ioredis| Redis[(Redis)]
     Api -.->|HttpOnly refresh cookie| Web
-    Web -->|errors| Sentry[(Sentry)]
-    Api -->|errors| Sentry
+    Web --> Sentry[(Sentry)]
+    Api --> Sentry
 ```
 
-Both apps import their domain types and request/response Zod schemas from the shared `@fixitnow/types` workspace package, so the types of HTTP payloads can never drift between client and server.
+Three workspaces in one repo (`apps/web`, `apps/api`, `packages/types`). The shared
+`@fixitnow/types` package holds the Zod schemas both sides use — so HTTP payload
+shapes can never drift between client and server.
 
-## Monorepo layout
+## Engineering decisions worth calling out
 
-```
-fixitnow/
-├── apps/
-│   ├── web/                 @fixitnow/web — Next.js 14 frontend (TypeScript)
-│   │   ├── app/             App Router (routes, layout, error/loading boundaries)
-│   │   ├── components/ui/   shadcn primitives (TS)
-│   │   ├── lib/             cn(), env (zod-validated)
-│   │   ├── middleware.ts    Route protection
-│   │   ├── sentry.*.config.ts
-│   │   └── ...
-│   └── api/                 @fixitnow/api — Express + Mongoose + Redis (TypeScript)
-│       ├── src/
-│       │   ├── config/      env (zod), logger (pino), db, redis
-│       │   ├── middlewares/ requestId, validate(), errorHandler
-│       │   ├── routes/      Routers (health, …)
-│       │   ├── utils/       AppError
-│       │   ├── openapi.ts   OpenAPI 3.0 spec served at /api/docs
-│       │   ├── app.ts       Express app factory (no listen)
-│       │   └── server.ts    bootstraps connections + listens
-│       ├── test/            Jest + Supertest integration tests
-│       └── Dockerfile
-├── packages/
-│   └── types/               @fixitnow/types — shared Zod schemas + TS types
-└── docker-compose.yml       Spins up web + api + mongo + redis
-```
+These are the trade-offs that shape the codebase. Each is documented inline at the relevant file.
+
+- **Zod as the single source of truth.** 35+ Zod schemas in `packages/types` power
+  Express request validation, react-hook-form resolvers on the client, _and_ an
+  auto-generated OpenAPI 3.0 spec via `zod-to-openapi`. Adding a field to a schema
+  reflects everywhere; the `/api/docs` page cannot fall out of sync.
+
+- **Stateless JWT auth with a Redis allowlist.** Access tokens (15 min) are held
+  in memory only — never `localStorage`, so XSS can't exfiltrate. Refresh tokens
+  (7 d, HttpOnly cookie) are _single-use_: each `/auth/refresh` does an atomic
+  Redis `DEL` of the consumed `jti`, so a stolen cookie buys exactly one window
+  before the legitimate user's next refresh invalidates the chain. Logout `SCAN`s
+  - `DEL`s every key under `refresh:{userId}:*` for global revocation.
+
+- **Race-safe double-booking via a _partial_ unique index.** The `Booking`
+  collection has a unique index on `(business, date, time)` filtered to
+  `status: "booked"`. Two concurrent insert attempts collide on Mongo E11000 →
+  the controller maps that to a typed `409 Conflict`. Cancellations don't free
+  the slot by deletion — the row stays as `cancelled` — so audit history is
+  preserved AND the slot is immediately rebookable.
+
+- **Idempotent rating aggregates.** Every review create/delete recomputes
+  `ratingAvg` (1-decimal rounded) and `ratingCount` on the parent Business with
+  a single `$group` aggregation. Idempotent by construction, so no transaction
+  needed — rerunning over the same review set always yields the same numbers.
+  The web side recomputes locally with the same rounding for instant
+  optimistic UI; the server reconciles on the next page load.
+
+- **Single-flight refresh on the typed API client.** A burst of concurrent 401s
+  triggers exactly one `/auth/refresh` call — all in-flight callers wait on the
+  same promise. Every request method accepts an `AbortSignal` so React effects
+  cancel cleanly on unmount. Surfaces a typed `ApiError` mirroring the
+  server's standard envelope, so callers branch on `err.status === 409` rather
+  than regexing strings.
+
+- **Redis cache-aside that fails open.** GET `/categories` and GET `/businesses`
+  are cached with a 60s TTL keyed by the query string. Every mutation prefix-
+  invalidates via non-blocking `SCAN`. Any Redis error → request goes through
+  unaffected. A degraded cache never cascades into application downtime.
 
 ## Tech stack
 
-| Layer            | Choice                                                                   |
-| ---------------- | ------------------------------------------------------------------------ |
-| Language         | **TypeScript** (strict) end-to-end                                       |
-| Frontend         | Next.js 14 (App Router), React 18, Tailwind CSS, shadcn/ui, Lucide icons |
-| Backend          | Express 4, Mongoose 8, ioredis, Pino, Helmet, cors, compression          |
-| Validation       | Zod (shared `@fixitnow/types` workspace)                                 |
-| API docs         | OpenAPI 3.0 + Swagger UI at `/api/docs`                                  |
-| Auth (web)       | Cookie + JWT against `apps/api/auth/*` (no third-party provider)         |
-| Auth (api)       | JWT access (15 m) + rotating refresh (7 d) with Redis allowlist          |
-| Tests            | Vitest + RTL + jsdom (web), Jest + Supertest (api)                       |
-| Observability    | Sentry (client + server + edge), structured logs with request id         |
-| Tooling          | ESLint, Prettier, Husky + lint-staged                                    |
-| Containerisation | Docker (multi-stage prod images), Docker Compose for local stack         |
-| CI/CD            | GitHub Actions, Jenkinsfile                                              |
+| Layer                     | Choice                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------- |
+| Language                  | **TypeScript**, strict mode, end-to-end                                               |
+| Frontend                  | Next.js 14 (App Router), React 18, Tailwind, shadcn/ui                                |
+| Backend                   | Express 4, Mongoose 8, ioredis, Pino, Helmet, cors, compression                       |
+| Validation & API contract | Zod via shared `@fixitnow/types` workspace, OpenAPI via `zod-to-openapi`              |
+| Forms                     | react-hook-form + `@hookform/resolvers/zod`                                           |
+| Auth                      | JWT access + rotating refresh tokens, Redis allowlist, bcrypt-hashed passwords        |
+| Testing                   | Jest + Supertest + MongoMemoryServer + ioredis-mock (api); Vitest + RTL + jsdom (web) |
+| Tooling                   | ESLint, Prettier, Husky, lint-staged                                                  |
+| Containerization          | Multi-stage Docker for both apps, Docker Compose for local dev                        |
+| CI/CD                     | GitHub Actions (format / lint / typecheck / test / build / Docker)                    |
+| Production                | Vercel + Render + MongoDB Atlas + Upstash Redis (all free tier)                       |
 
 ## Quick start
-
-### Prerequisites
-
-- Node.js **>= 18.17** (Node 20 recommended), npm 9+
-- (Optional) Docker Desktop — easiest way to run Mongo + Redis locally
-
-### Install everything
 
 ```bash
 git clone https://github.com/Sachinrajawat/FixItNow.git
 cd FixItNow
-npm install                     # installs all workspaces
-cp apps/web/.env.example apps/web/.env.local
-cp apps/api/.env.example apps/api/.env
+npm install
+cp apps/web/.env.example apps/web/.env.local  # NEXT_PUBLIC_API_URL=http://localhost:4000
+cp apps/api/.env.example apps/api/.env        # MONGO_URI / REDIS_URL / JWT_* secrets
+
+# Bring up Mongo + Redis (host ports 27018 and 6380 to avoid clashes)
+docker compose up mongo redis -d
+
+# Seed realistic data: 8 categories, 12 businesses, 3 demo users, 5 reviews
+npm run seed --workspace @fixitnow/api
+
+# Run the apps
+npm run dev:api    # http://localhost:4000  (API + /api/docs)
+npm run dev:web    # http://localhost:3000  (Next.js)
 ```
 
-### Run the dev stack
+Sign up with any email or use the seeded admin (`admin@fixitnow.dev` / `Admin#12345`).
 
-The most reliable way is to use Docker for the data layer and run the apps locally:
+## Quality bar
 
-```bash
-# In one terminal — Mongo + Redis
-docker compose up mongo redis
-
-# In another terminal — API on :4000
-npm run dev:api
-
-# In another terminal — Web on :3000
-npm run dev:web
+```
+typecheck   3 / 3 workspaces clean (tsc --noEmit, strict everywhere)
+lint        ESLint + next lint clean
+prettier    workspace-wide format check
+tests       59 api + 49 web = 108 passing
+build       both production builds green; 13 routes emitted
 ```
 
-…or run everything in containers in one go:
-
-```bash
-docker compose up --build
-```
-
-## Environment variables
-
-### `apps/web` (`.env.local`)
-
-| Variable                 | Required | Description                                         |
-| ------------------------ | :------: | --------------------------------------------------- |
-| `NEXT_PUBLIC_SITE_URL`   |    no    | Used for SEO/OpenGraph (`metadataBase`).            |
-| `NEXT_PUBLIC_API_URL`    |   yes    | Base URL of the API (e.g. `http://localhost:4000`). |
-| `NEXT_PUBLIC_SENTRY_DSN` |    no    | Optional client-side Sentry DSN.                    |
-
-### `apps/api` (`.env`)
-
-| Variable             | Required | Description                                                                                                 |
-| -------------------- | :------: | ----------------------------------------------------------------------------------------------------------- |
-| `NODE_ENV`           |    no    | `development` (default), `test`, or `production`.                                                           |
-| `PORT`               |    no    | Default `4000`.                                                                                             |
-| `MONGO_URI`          |   yes    | e.g. `mongodb://localhost:27018/fixitnow` (docker-mapped) or `mongodb://localhost:27017/fixitnow` (native). |
-| `REDIS_URL`          |   yes    | e.g. `redis://localhost:6380` (docker-mapped) or `redis://localhost:6379` (native).                         |
-| `JWT_ACCESS_SECRET`  |   yes    | ≥ 32 chars. Phase 2 Step 2.                                                                                 |
-| `JWT_REFRESH_SECRET` |   yes    | ≥ 32 chars. Phase 2 Step 2.                                                                                 |
-| `JWT_ACCESS_TTL`     |    no    | Default `15m`.                                                                                              |
-| `JWT_REFRESH_TTL`    |    no    | Default `7d`.                                                                                               |
-| `CORS_ORIGIN`        |    no    | Comma-separated list. Default `http://localhost:3000`.                                                      |
-| `LOG_LEVEL`          |    no    | `info` (default) / `debug` / `warn` / etc.                                                                  |
-| `SENTRY_DSN`         |    no    | Optional server-side Sentry DSN.                                                                            |
-
-## Useful scripts
-
-All scripts run at the repo root and use npm workspaces under the hood.
-
-```bash
-npm install                # one-shot install for every workspace
-npm run dev                # runs every workspace's dev script in parallel
-npm run dev:web            # web only
-npm run dev:api            # api only
-npm run build              # builds every workspace
-npm run build:web          # web only
-npm run build:api          # api only
-npm run lint               # lint every workspace
-npm run typecheck          # tsc --noEmit in every workspace
-npm test                   # vitest (web) + jest (api)
-npm run format             # Prettier check
-npm run format:fix         # Prettier write
-npm run docker:dev         # docker compose up --build
-```
-
-## Running with Docker
-
-```bash
-docker compose up --build
-```
-
-This brings up four services:
-
-| Service | Port           | Description                                                                                      |
-| ------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `mongo` | 27018 -> 27017 | MongoDB 7 with a named volume (host port 27018 to avoid clashing with a local / tunnelled Mongo) |
-| `redis` | 6380 -> 6379   | Redis 7 (alpine, host port 6380)                                                                 |
-| `api`   | 4000           | `@fixitnow/api` (multi-stage prod image)                                                         |
-| `web`   | 3000           | `@fixitnow/web` (dev container)                                                                  |
-
-Health checks are configured on Mongo and Redis so `api` waits for them before starting.
-
-## Testing & quality
-
-- **Type safety** — `npm run typecheck` runs `tsc --noEmit` in every workspace (strict mode everywhere).
-- **Lint** — `npm run lint` runs `next lint` in `web` and `eslint` (with `@typescript-eslint`) in `api`.
-- **Format** — `npm run format` / `npm run format:fix` (Prettier + `prettier-plugin-tailwindcss`).
-- **Web tests** — Vitest + React Testing Library + jsdom. `npm run test:coverage` for HTML coverage.
-- **API tests** — Jest + Supertest, with `--forceExit` so dangling Redis/Mongo handles never hang CI.
-- **Pre-commit** — Husky runs `lint-staged` (Prettier --write on staged files).
-- **Pre-push** — Husky runs `npm run typecheck`.
-
-## CI/CD
-
-[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs on every push & PR to `main`:
-
-1. `npm ci` (workspaces)
-2. `npm run format`
-3. `npm run lint`
-4. `npm run typecheck`
-5. `npm test`
-6. `npm run build:web` and `npm run build:api`
-7. On `main` only: build production Docker images for both apps with Buildx layer caching.
-
-A [`Jenkinsfile`](./Jenkinsfile) mirrors the pipeline for self-hosted Jenkins users.
+CI runs format → lint → typecheck → test → build on every push and PR.
+On `main` it also builds production Docker images for both apps with
+Buildx layer caching.
 
 ## Deployment
 
-The repo is **deploy-ready** for a free-tier production stack:
-
-- **Web** (`apps/web`) → Vercel (Next.js standalone build)
-- **API** (`apps/api`) → Render Docker web service (blueprint in [`render.yaml`](./render.yaml))
-- **MongoDB** → Atlas free M0 cluster
-- **Redis** → Upstash free tier (10k commands/day)
-- **SEO** → dynamic [`app/sitemap.ts`](./apps/web/app/sitemap.ts), [`app/robots.ts`](./apps/web/app/robots.ts), JSON-LD `LocalBusiness` on `/details/[id]`
-
-Full step-by-step (~30 min, click-only): [**DEPLOY.md**](./DEPLOY.md).
+The repo is deploy-ready for a free-tier production stack: Vercel for the
+web, Render (with the `render.yaml` blueprint) for the API, MongoDB Atlas,
+Upstash Redis. See [DEPLOY.md](./DEPLOY.md) for the step-by-step.
 
 ## Roadmap
 
-- [x] **Phase 0 — Cleanup**: bug fixes, real metadata, footer, theme toggle, working search, route protection, multi-stage Docker, modern CI.
-- [x] **Phase 1 — TS & quality**: TypeScript migration (strict), ESLint/Prettier/Husky/lint-staged, env validation with Zod, Vitest + React Testing Library, Sentry.
-- [x] **Phase 2, Step 1 — Monorepo + API skeleton**: npm workspaces (`apps/web`, `apps/api`, `packages/types`); Express + TS + MongoDB + Redis API with health probes, request id, structured logging, Helmet, cors, validation middleware, AppError, Swagger UI; first integration tests with Jest + Supertest; Docker compose stack with mongo + redis + api + web.
-- [x] **Phase 2, Step 2 — Auth & models**: User/Category/Business/Booking/Review Mongoose models with proper indexes (compound, text, geospatial, unique); bcrypt password hashing; JWT access (15 m) + refresh (7 d) with Redis allowlist + single-use rotation + global revocation on logout; httpOnly+SameSite refresh cookie scoped to /auth; `requireAuth` + `requireRole` middlewares; full integration test suite against MongoMemoryServer + ioredis-mock.
-- [x] **Phase 2, Step 3 — Endpoints & web migration**: full CRUD for `/categories`, `/businesses` (text + category + paginated + `?near=lng,lat&radius=` geo search), `/bookings` (create / list-mine / cancel with double-booking prevented by a partial unique index), `/reviews` (with idempotent business `ratingAvg`/`ratingCount` aggregation); Redis cache-aside on GET endpoints + Redis-backed rate limiting on POSTs; `npm run seed` script with realistic data; integration tests for every endpoint against MongoMemoryServer. On the web side: typed `lib/apiClient.ts` (fetch + auto-refresh on 401 + abort), `AuthProvider` powered by the API's cookie+JWT flow, dedicated `/login` and `/signup` pages with react-hook-form + Zod, Hygraph + NextAuth + Descope removed entirely, every remaining `.jsx` file converted to `.tsx`. Auto-generated OpenAPI 3.0 spec from the shared Zod schemas via `zod-to-openapi` so `/api/docs` cannot drift.
-- [ ] **Phase 3 — Headline features** (in progress): reviews & ratings UI ✓, geo-search ✓, admin dashboard with RBAC ✓ (`/admin/categories` shipped; `/admin/businesses` + `/admin/bookings` to come); Stripe (test mode) payments, email confirmations, BullMQ background jobs still pending.
-- [ ] **Phase 4 — Polish & deploy** (partly done): dynamic sitemap + robots ✓, JSON-LD on `/details` ✓, route-group metadata ✓, Render Blueprint + step-by-step [`DEPLOY.md`](./DEPLOY.md) ✓. Pending: per-page `generateMetadata` on dynamic pages, accessibility audit, performance budget, deployed live URLs, screenshots and demo video.
+- `/admin/businesses` and `/admin/bookings` dashboards (same patterns as `/admin/categories`)
+- Stripe test-mode payments on booking confirmation with webhook idempotency
+- BullMQ background jobs (booking expiry, email confirmations, weekly digests)
+- Per-page `generateMetadata` on `/details/[id]` and `/search/[category]` for richer SEO
+- Playwright end-to-end smoke for the signup → book → cancel flow
+- Lighthouse CI / performance budget in the workflow
 
 ## License
 

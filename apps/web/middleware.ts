@@ -1,30 +1,32 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Edge middleware for route protection.
+ * Edge middleware.
  *
- * The API issues an HttpOnly refresh cookie (`fin_rt`) on every successful
- * login. We do NOT validate the JWT here — that's the API's job — we just
- * gate access to authenticated pages on the *presence* of the cookie and
- * let the client transparently refresh on mount. If the cookie is missing
- * we bounce to /login?next=<intended path>.
+ * Previous design used the API's `fin_rt` HttpOnly refresh cookie as a
+ * "are you logged in?" hint at the edge. That works on a single-origin
+ * deployment (everything on localhost during dev) but **breaks in
+ * production** when web is on Vercel and API is on Render: the cookie
+ * is scoped to the API's origin and is never sent to Vercel, so the
+ * middleware would redirect every authenticated user to /login on first
+ * navigation to a protected page.
+ *
+ * The fix is to drop the cookie check at the edge and rely on the
+ * client-side AuthGate / AdminGate components — they already know auth
+ * state via the in-memory access token + silent refresh on boot, and
+ * that works regardless of which origin set which cookie.
+ *
+ * We keep this file (rather than deleting it) as the single place to
+ * add edge-level redirects/headers later — e.g. a same-origin Vercel
+ * rewrite proxy that *would* make the cookie visible here.
  */
-const REFRESH_COOKIE = "fin_rt";
-
-export function middleware(req: NextRequest) {
-  const hasRefreshCookie = Boolean(req.cookies.get(REFRESH_COOKIE)?.value);
-  if (hasRefreshCookie) return NextResponse.next();
-
-  const url = req.nextUrl.clone();
-  const next = `${req.nextUrl.pathname}${req.nextUrl.search}`;
-  url.pathname = "/login";
-  url.search = `?next=${encodeURIComponent(next)}`;
-  return NextResponse.redirect(url);
+export function middleware(_req: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
-  // /admin is also matched: this guard only verifies *authentication* —
-  // the role check (admin only) is enforced by AdminGate inside the
-  // /admin layout once the user has loaded.
-  matcher: ["/mybooking/:path*", "/details/:path*", "/admin/:path*"],
+  // Intentionally empty: client-side guards handle route protection.
+  // See `apps/web/app/_components/AuthGate.tsx` for /mybooking and
+  // `apps/web/app/admin/AdminGate.tsx` for /admin/*.
+  matcher: [],
 };

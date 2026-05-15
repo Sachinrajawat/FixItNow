@@ -1,31 +1,39 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 
 /**
  * Client-side role guard for everything under /admin.
  *
- * The cookie-presence check in `middleware.ts` already redirects anonymous
- * users to /login. This component adds the second hop: a signed-in user
- * who is not an admin is bounced back to "/" with a toast.
+ * Edge middleware can't reliably gate authentication in a cross-origin
+ * deployment (Vercel web + Render API), so this gate has to handle BOTH
+ * unauthenticated and authenticated-but-not-admin in one place:
  *
- * Kept as a tiny helper so individual admin pages can compose it cleanly.
+ *   loading                          → spinner
+ *   unauthenticated                  → /login?next=<current path>
+ *   authenticated, role !== "admin"  → "/" + toast
+ *   authenticated, role === "admin"  → children
  */
 export function AdminGate({ children }: { children: ReactNode }) {
   const { status, user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname() ?? "/admin";
 
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+      return;
+    }
     if (status === "authenticated" && !isAdmin) {
       toast.error("Admin access required.");
       router.replace("/");
     }
-  }, [status, isAdmin, router]);
+  }, [status, isAdmin, router, pathname]);
 
   if (status === "loading") {
     return (

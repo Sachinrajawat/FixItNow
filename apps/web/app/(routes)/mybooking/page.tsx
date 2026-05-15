@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BookingHistoryList from "./_component/BookingHistoryList";
 import { api, ApiError } from "@/lib/apiClient";
 import { useAuth } from "@/lib/auth-context";
+import { AuthGate } from "@/app/_components/AuthGate";
 import { toast } from "sonner";
 import type { Booking } from "@/types";
 
-const MyBooking = () => {
+function MyBookingInner() {
   const [bookingHistory, setBookingHistory] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -96,6 +97,12 @@ const MyBooking = () => {
       </Tabs>
     </div>
   );
-};
+}
 
-export default MyBooking;
+export default function MyBooking() {
+  return (
+    <AuthGate>
+      <MyBookingInner />
+    </AuthGate>
+  );
+}

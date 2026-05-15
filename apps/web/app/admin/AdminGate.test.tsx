@@ -22,6 +22,7 @@ vi.mock("@/lib/auth-context", () => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => routerMock,
+  usePathname: () => "/admin",
 }));
 
 vi.mock("sonner", () => ({ toast: toastMock }));
@@ -58,6 +59,20 @@ describe("<AdminGate />", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /checking permissions/i
     );
+    expect(screen.queryByText("secret")).not.toBeInTheDocument();
+  });
+
+  it("redirects unauthenticated users to /login with a next= hint", async () => {
+    authMock.status = "unauthenticated";
+    authMock.user = null;
+    render(
+      <AdminGate>
+        <p>secret</p>
+      </AdminGate>
+    );
+    await waitFor(() => {
+      expect(routerMock.replace).toHaveBeenCalledWith("/login?next=%2Fadmin");
+    });
     expect(screen.queryByText("secret")).not.toBeInTheDocument();
   });
 
